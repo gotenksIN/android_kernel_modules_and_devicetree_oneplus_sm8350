@@ -1,7 +1,7 @@
 #include "../../qcom/lahaina-mtp-overlay.dts"
 #include "lahaina-camera-sensor-20085.dtsi"
 #include "peacock-common.dtsi"
-#include "peacock-20085.dtsi"
+#include "peacock-20085_EVT2.dtsi"
 #include "nfc/peacock-nfc-sn100t.dtsi"
 
 / {

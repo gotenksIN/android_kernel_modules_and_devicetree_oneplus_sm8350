@@ -1453,7 +1453,7 @@ int cam_sensor_power_up(struct cam_sensor_ctrl_t *s_ctrl)
 	}
 	trace_end();
 
-	trace_begin("%d_%d_0x%x Init", s_ctrl->cci_num, s_ctrl->cci_i2c_master, s_ctrl->sensordata->slave_info.sensor_id);
+	trace_begin("%u_%u_0x%x Init", s_ctrl->cci_num, s_ctrl->cci_i2c_master, s_ctrl->sensordata->slave_info.sensor_id);
 	rc = camera_io_init(&(s_ctrl->io_master_info));
 	if (rc < 0) {
 		CAM_ERR(CAM_SENSOR, "cci_init failed: rc: %d", rc);

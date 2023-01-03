@@ -243,6 +243,13 @@ int cam_ois_power_up(struct cam_ois_ctrl_t *o_ctrl)
 	}
 
         InitOIS(o_ctrl);
+	if(strstr(o_ctrl->ois_name,"124")) {
+		ois_write_fwstate(OIS_FW_DOWNLOAD_INTIAL);
+	}
+	else
+	{
+		ois_write_fwstate(OIS_FW_DOWNLOAD_COMPLETED);
+	}
 
 	return rc;
 cci_failure:

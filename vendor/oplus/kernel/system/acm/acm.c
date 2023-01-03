@@ -1524,7 +1524,9 @@ static int acm_logging_loop(void *data)
 	*/
 
 	while (!kthread_should_stop()) {
-		wait_for_completion_interruptible(&acm_logging_comp);
+		if (wait_for_completion_interruptible(&acm_logging_comp)) {
+			pr_err("ACM: %s is interrupted!\n", __func__);
+		}
 
 		msleep(DELETE_LOG_UPLOAD_INTERVAL_MS);
 

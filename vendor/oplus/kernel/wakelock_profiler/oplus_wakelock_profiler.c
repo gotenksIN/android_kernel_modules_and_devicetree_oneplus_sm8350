@@ -13,6 +13,7 @@
 #include "qcom_platform_bengal.h"
 #include "qcom_platform_lagoon.h"
 #include "qcom_platform_blair.h"
+#include "qcom_platform_holi.h"
 
 static int platform_id;
 static struct wakeup_count_desc_t **comm_all_modules;
@@ -74,6 +75,11 @@ static int get_platform(void)
 		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_lahaina;
 		modem_report_exchange = modem_report_exchange_lahaina;
 		pr_info("platform is %s\n", PLATFORM_LAHAINA);
+	} else if (strstr(comp_str, PLATFORM_HOLI)) {
+		platform_id = HOLI;
+		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_holi;
+		modem_report_exchange = modem_report_exchange_holi;
+		pr_info("platform is %s\n", PLATFORM_HOLI);
 	} else {
 		platform_id = 0;
 		comm_all_modules = NULL;
@@ -124,7 +130,6 @@ int wakeup_reasons_statics(const char *irq_name, int choose_flag)
 }
 
 #ifdef OPLUS_FEATURE_POWERINFO_RPMH
-/*SunFaliang@BSP.Power.Basic, 2020/07/08, add for modem wakeup statics.*/
 extern int rpmh_modem_sleepinfo_buffer_clear(void);
 #endif /*OPLUS_FEATURE_POWERINFO_RPMH*/
 
@@ -149,7 +154,6 @@ void wakeup_reasons_clear(int choose_flag)
 		}
 	}
 	#ifdef OPLUS_FEATURE_POWERINFO_RPMH
-	/*SunFaliang@BSP.Power.Basic, 2020/07/08, add for modem wakeup statics.*/
 	rpmh_modem_sleepinfo_buffer_clear();
 	#endif /*OPLUS_FEATURE_POWERINFO_RPMH*/
 }

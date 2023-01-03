@@ -78,11 +78,15 @@ enum {
 	SAR_REG_ADDRESS,
 	SAR_REG_VALUE,
 	GOLD_REAR_CCT_3K,
-	GOLD_REAR_CCT_6K
+	GOLD_REAR_CCT_6K,
+	GOLD_ALS_FACTOR,
+	GOLD_REAR_ALS_FACTOR,
+	GOLD_REAR_CCT_FACTOR
 };
 
-#define ID_REAR_ALS  97
-#define ID_REAR_CCT	   98
+#define ID_REAR_ALS     97
+#define ID_REAR_CCT     98
+#define SOURCE_NUM      6
 
 static struct delayed_work parameter_work;
 static struct delayed_work utc_work;
@@ -102,6 +106,10 @@ static int g_reg_value = 0;
 static char acc_cali_range[16] = {0};
 static char gold_rear_cct_3k[35] = {0};
 static char gold_rear_cct_6k[35] = {0};
+static char gold_rear_cct_factor[35] = {0};
+static uint32_t gold_als_factor = 1001;
+static uint32_t gold_rear_als_factor = 1001;
+static uint32_t lb_bri_max = 1500;
 atomic_t utc_suspend;
 
 enum {
@@ -133,7 +141,7 @@ int oplus_get_dts_feature(struct device_node *p_node, char *node_name, char *fea
 	char *device_name = NULL;
 	struct device_node *ch_node = NULL;
 
-	for (index = 1; index <= 3; index++) {
+	for (index = 1; index <= SOURCE_NUM; index++) {
 		sprintf(node, "%s_%d", node_name, index);
 		ch_node = of_get_child_by_name(p_node, node);
 		if (ch_node == NULL) {
@@ -175,11 +183,24 @@ int oplus_get_dts_feature(struct device_node *p_node, char *node_name, char *fea
 static void is_support_lb_algo(struct device_node *ch_node)
 {
 	int ret = 0;
-	ret = of_property_read_u32(ch_node, "use_lb_algo", (u32 *)&g_als_info.use_lb_algo);
+	int lb_algo = 0;
+	ret = of_property_read_u32(ch_node, "use_lb_algo", &lb_algo);
 	if (ret < 0) {
 		DEVINFO_LOG("get use_lb_algo fail");
 	}
+	g_als_info.use_lb_algo = (lb_algo == 1) ? true : false;
 	DEVINFO_LOG("support lb algo %d", g_als_info.use_lb_algo);
+}
+
+static void get_lb_max_brightness(struct device_node *ch_node)
+{
+	int ret = 0;
+	ret = of_property_read_u32(ch_node, "lb_bri_max", &lb_bri_max);
+	if (ret < 0) {
+		lb_bri_max = 1500;
+		DEVINFO_LOG("get lb_bri_max fail");
+	}
+	DEVINFO_LOG("lb_bri_max %d\n", lb_bri_max);
 }
 
 static void get_new_arch_info(struct device_node *ch_node)
@@ -244,8 +265,8 @@ static void get_accgyro_cali_version(void)
 	if (ret < 0) {
 		return;
 	} else {
-		DEVINFO_LOG("acc range x y z [%d, %d, %d]", acc_thrd[0], acc_thrd[1], acc_thrd[2]);
-		sprintf(acc_cali_range, "%d %d %d", acc_thrd[0], acc_thrd[1], acc_thrd[2]);
+		DEVINFO_LOG("acc range x y z [%u, %u, %u]", acc_thrd[0], acc_thrd[1], acc_thrd[2]);
+		sprintf(acc_cali_range, "%u %u %u", acc_thrd[0], acc_thrd[1], acc_thrd[2]);
 	}
 }
 
@@ -374,6 +395,18 @@ static void oplus_als_cali_data_init(void)
 	}
 	DEVINFO_LOG("row_coe = %d\n", gdata->row_coe);
 
+	ret = oplus_get_dts_feature(parent_node, "light", "gold_als_factor", &gold_als_factor);
+	if (ret < 0) {
+		gold_als_factor = 1001;
+	}
+	DEVINFO_LOG("gold_als_factor = %d\n", gold_als_factor);
+
+	ret = oplus_get_dts_feature(parent_node, "rear_cct", "gold_rear_als_factor", &gold_rear_als_factor);
+	if (ret < 0) {
+		gold_rear_als_factor = 1001;
+	}
+	DEVINFO_LOG("gold_rear_als_factor = %d\n", gold_rear_als_factor);
+
 	sensor_proc_dir = proc_mkdir("sensor", NULL);
 	if (!sensor_proc_dir) {
 		DEVINFO_LOG("can't create proc_sensor proc\n");
@@ -407,32 +440,51 @@ static void get_gold_rear_cct(void)
 	/*get 3000k gold ch*/
 	ret = oplus_get_dts_feature(parent_node, "rear_cct", "gold_rear_cct_3k", gold_rear_cct);
 	if (ret < 0) {
+		DEVINFO_LOG("gold_rear_cct_3k fail\n");
 		return;
 	} else {
-		DEVINFO_LOG("gold_rear_cct_3k [%d, %d, %d, %d, %d, %d]",
-			 gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
-			 gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
+		DEVINFO_LOG("gold_rear_cct_3k [%u, %u, %u, %u, %u, %u]",
+			gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
+			gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
 
-		sprintf(gold_rear_cct_3k, "%d %d %d %d %d %d",
+		sprintf(gold_rear_cct_3k, "%u %u %u %u %u %u",
 			 gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
 			 gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
 	}
+
 	/*get 6000k gold ch*/
+	memset(gold_rear_cct, 0, sizeof(gold_rear_cct));
 	ret = oplus_get_dts_feature(parent_node, "rear_cct", "gold_rear_cct_6k", gold_rear_cct);
 	if (ret < 0) {
+		DEVINFO_LOG("gold_rear_cct_6k fail\n");
 		return;
 	} else {
-		DEVINFO_LOG("gold_rear_cct_6k [%d, %d, %d, %d, %d, %d]",
+		DEVINFO_LOG("gold_rear_cct_6k [%u, %u, %u, %u, %u, %u]",
+			gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
+			gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
+
+		sprintf(gold_rear_cct_6k, "%u %u %u %u %u %u",
 			 gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
 			 gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
+	}
 
-		sprintf(gold_rear_cct_6k, "%d %d %d %d %d %d",
+	/* get gold_rear_cct_factor */
+	memset(gold_rear_cct, 0, sizeof(gold_rear_cct));
+	ret = oplus_get_dts_feature(parent_node, "rear_cct", "gold_rear_cct_factor", gold_rear_cct);
+	if (ret < 0) {
+		DEVINFO_LOG("gold_rear_cct_factor fail, use default\n");
+		sprintf(gold_rear_cct_factor, "%d %d %d %d %d %d", 976, 994, 1038, 981, 920, 1001);
+		return;
+	} else {
+		DEVINFO_LOG("gold_rear_cct_factor [%u, %u, %u, %u, %u, %u]",
+			gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
+			gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
+
+		sprintf(gold_rear_cct_factor, "%u %u %u %u %u %u",
 			 gold_rear_cct[0], gold_rear_cct[1], gold_rear_cct[2],
 			 gold_rear_cct[3], gold_rear_cct[4], gold_rear_cct[5]);
 	}
 }
-
-
 
 static void sensor_devinfo_work(struct work_struct *dwork)
 {
@@ -557,7 +609,7 @@ static int get_msensor_parameter(struct device_node *ch_node, int num)
 			sprintf(para_buf[num], "%s,%d", temp_buf, mag_data[index]);
 			strcpy(temp_buf, para_buf[num]);
 		}
-		sprintf(para_buf[num], "\"%s\":[%d%s]", libname, mag_data[0], temp_buf);
+		sprintf(para_buf[num], "\"%s\":[%u%s]", libname, mag_data[0], temp_buf);
 	}
 	return 0;
 }
@@ -620,6 +672,18 @@ static int sensor_feature_read_func(struct seq_file *s, void *v)
 	case GOLD_REAR_CCT_6K:
 		DEVINFO_LOG("gold_rear_cct_6k = %s \n", gold_rear_cct_6k);
 		seq_printf(s, "%s", gold_rear_cct_6k);
+		break;
+	case GOLD_ALS_FACTOR:
+		DEVINFO_LOG("gold_als_factor = %d\n", gold_als_factor);
+		seq_printf(s, "%d", gold_als_factor);
+		break;
+	case GOLD_REAR_ALS_FACTOR:
+		DEVINFO_LOG("gold_rear_als_factor = %d\n", gold_rear_als_factor);
+		seq_printf(s, "%d", gold_rear_als_factor);
+		break;
+	case GOLD_REAR_CCT_FACTOR:
+		DEVINFO_LOG("gold_rear_cct_factor = %s \n", gold_rear_cct_factor);
+		seq_printf(s, "%s", gold_rear_cct_factor);
 		break;
 	default:
 		seq_printf(s, "not support chendai\n");
@@ -723,6 +787,9 @@ static struct proc_node sensor_feature_file[] = {
 	{"sar_reg_value", SAR_REG_VALUE},
 	{"gold_rear_cct_3k", GOLD_REAR_CCT_3K},
 	{"gold_rear_cct_6k", GOLD_REAR_CCT_6K},
+	{"gold_als_factor", GOLD_ALS_FACTOR},
+	{"gold_rear_als_factor", GOLD_REAR_ALS_FACTOR},
+	{"gold_rear_cct_factor", GOLD_REAR_CCT_FACTOR},
 };
 
 static int oplus_sensor_feature_init()
@@ -811,13 +878,17 @@ static int lcdinfo_callback(struct notifier_block *nb,
 		break;
 	case LCM_BRIGHTNESS_TYPE:
 		val = *(int*)data;
+		if (val <= lb_bri_max) {
+			val = val / 20 * 20;
+		} else {
+			val = 2048;
+		}
 		if (val != g_als_info.brightness) {
 			g_als_info.brightness = val;
 			if (g_als_info.use_lb_algo) {
 				schedule_delayed_work(&lcdinfo_work, 0);
 			}
 		}
-
 		break;
 	default:
 		break;
@@ -847,6 +918,7 @@ static int oplus_devinfo_probe(struct platform_device *pdev)
 		}
 		else if (strstr(ch_node->name, "light") != NULL) {
 			is_support_lb_algo(ch_node);
+			get_lb_max_brightness(ch_node);
 		}
 	}
 
@@ -861,7 +933,7 @@ static int oplus_devinfo_probe(struct platform_device *pdev)
 		DEVINFO_LOG("kzalloc err\n ");
 		return -ENOMEM;
 	}
-	g_als_info.brightness = 1023;
+	g_als_info.brightness = 10000;
 	g_als_info.dc_mode = 0;
 	/*g_als_info.use_lb_algo = true;*/
 	atomic_set(&utc_suspend, 0);

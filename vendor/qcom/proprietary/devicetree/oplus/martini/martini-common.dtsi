@@ -665,6 +665,10 @@
 	oplus,adsp-voocphy {
 		compatible = "oplus,adsp-voocphy";
 	};
+
+	midas_pdev {
+		compatible = "oplus,midas-pdev";
+	};
 };
 
 &battery_charger {
@@ -1668,7 +1672,7 @@
             als-factor = <160>;
             is_als_initialed = <0>;
             als_buffer_length = <10>;
-            als_ratio_type = <2>; // use for stk33502 to split light, <0:type old; 1:type abcde; 2:type accordance>
+            als_ratio_type = <3>; // use for stk33502 to split light, <0:type old; 1:type abcde; 2:type accordance>
         };
         //P-sensor
         psensor@0 {
@@ -1710,7 +1714,7 @@
             bus-number = <5>;
             irq-number = <89>;
             ps-type = <1>;
-            ps_saturation = <4000>;
+            ps_saturation = <5000>;
             is_need_close_pd = <1>; /*1-need close 2-close has contidition 0-not close*/
             low_step = <300>;
             high_step = <400>;
@@ -1939,7 +1943,7 @@
 					 50 20 1 3068 3168
 					 0 0 0 0 0
 					 0 0 0 0 0>;
-		algorithm_support;
+		//algorithm_support;
 		kalman_value = <2000 500 256 1024 0x10001>;
 
 		/* SW Support Feature Control */
@@ -2089,7 +2093,7 @@
 		//grip_no_driver_support;
 		health_monitor_support;
 		black_gesture_indep_support;
-		algorithm_support;
+		//algorithm_support;
 
 		/*
 		 *Virtual Key Config:

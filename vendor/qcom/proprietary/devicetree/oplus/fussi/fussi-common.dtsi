@@ -1998,6 +1998,7 @@
 		platform_support_project_dir = <20031>;
 		platform_support_project_commandline = "default_commandline";
 		platform_support_project_external_name = "BD368";
+		panel = <&dsi_oplus19065_samsung_1440_3168_dsc_cmd>;
 
 		touchpanel,elimination-range = <20 200 200>;
 		prevention,no_handle_para = <0 0 0>;
@@ -2091,6 +2092,12 @@
 		platform_support_project = <20031 20311>;
 		platform_support_project_dir = <20031 20031>;
 		platform_support_project_commandline = "mdss_dsi_oplus20031_samsung_1440_3216_dsc_cmd";
+		panel = <&dsi_oplus20031_samsung_1440_3216_dsc_cmd
+		         &dsi_oplus20031_samsung_1440_3216_dsc_cmd_evt
+		         &dsi_oplus20031_samsung_1440_3216_dsc_cmd_dvt
+		         &dsi_oplus20031_samsung_1440_3216_dsc_cmd_dvt_id09
+		         &dsi_oplus20031_samsung_1440_3216_dsc_cmd_dvt_id07>;
+
 		prevention,curved_screen_V2;
 		prevention,grip_disable_level = <6>;
 		prevention,updelay_time_ms = <30>;

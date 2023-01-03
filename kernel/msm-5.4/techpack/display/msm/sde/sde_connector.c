@@ -2801,6 +2801,10 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_TOUCHPANEL_OPLUS)
+extern void set_esd_check_happened(int val);
+#endif
+
 static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	bool skip_pre_kickoff)
 {
@@ -2816,6 +2820,10 @@ static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	 */
 	if (conn->panel_dead)
 		return;
+
+#if IS_ENABLED(CONFIG_TOUCHPANEL_OPLUS)
+        set_esd_check_happened(1);
+#endif
 
 	SDE_EVT32(SDE_EVTLOG_ERROR);
 	sde_encoder_display_failure_notification(conn->encoder,

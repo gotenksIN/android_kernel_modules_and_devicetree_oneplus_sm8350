@@ -24,6 +24,7 @@ extern struct frame_boost_group default_frame_boost_group;
 extern int stune_boost;
 extern unsigned int timeout_load;
 extern bool walt_clusters_parsed;
+#undef DEBUG
 #define DEBUG 0
 
 static void ctrl_set_fbg(int pid, int tid, int hwtid1, int hwtid2)
@@ -160,8 +161,12 @@ static long ofb_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (_IOC_TYPE(cmd) != OFB_MAGIC)
 		return -ENOTTY;
 
-	if (_IOC_NR(cmd) >= CMD_ID_MAX)
-		return -ENOTTY;
+	if (_IOC_NR(cmd) >= CMD_ID_MAX) {
+#if DEBUG
+		ofb_debug("Exceed CMD_ID_MAX");
+#endif
+		return ret;
+	}
 
 	if (copy_from_user(&data, uarg, sizeof(data))) {
 		ofb_debug("invalid address");
@@ -171,11 +176,15 @@ static long ofb_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (unlikely(!walt_clusters_parsed))
 		return -EFAULT;
 
-	switch (cmd) {
-		case CMD_ID_SET_FPS:
+	/*
+	 * Process variable-sized commands (Frameboost3.0 extend ofb_ctrl_data,
+	 * mask IOCSIZE_MASK segment of cmd for kernel5.4 Inputboost2.0 here).
+	 */
+	switch (cmd & ~IOCSIZE_MASK) {
+		case (CMD_ID_SET_FPS & ~IOCSIZE_MASK):
 			crtl_update_refresh_rate(data.pid, data.vsyncNs);
 			break;
-		case CMD_ID_BOOST_HIT:
+		case (CMD_ID_BOOST_HIT & ~IOCSIZE_MASK):
 			//if (data.stage == BOOST_MOVE_FG) {
 			//	ctrl_set_fbg(data.pid, data.tid, data.hwtid1, data.hwtid2);
 			//}
@@ -198,23 +207,25 @@ static long ofb_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				ctrl_frame_state(data.pid, false);
 			}
 			break;
-		case CMD_ID_END_FRAME:
+		case (CMD_ID_END_FRAME & ~IOCSIZE_MASK):
 			//ofb_debug("CMD_ID_END_FRAME pid:%d tid:%d", data.pid, data.tid);
 			break;
-		case CMD_ID_SF_FRAME_MISSED:
+		case (CMD_ID_SF_FRAME_MISSED & ~IOCSIZE_MASK):
 			//ofb_debug("CMD_ID_END_FRAME pid:%d tid:%d", data.pid, data.tid);
 			break;
-		case CMD_ID_SF_COMPOSE_HINT:
+		case (CMD_ID_SF_COMPOSE_HINT & ~IOCSIZE_MASK):
 			//ofb_debug("CMD_ID_END_FRAME pid:%d tid:%d", data.pid, data.tid);
 			break;
-		case CMD_ID_IS_HWUI_RT:
+		case (CMD_ID_IS_HWUI_RT & ~IOCSIZE_MASK):
 			//ofb_debug("CMD_ID_END_FRAME pid:%d tid:%d", data.pid, data.tid);
 			break;
-		case CMD_ID_SET_TASK_TAGGING:
+		case (CMD_ID_SET_TASK_TAGGING & ~IOCSIZE_MASK):
 			//ofb_debug("CMD_ID_END_FRAME pid:%d tid:%d", data.pid, data.tid);
 			break;
 		default:
-			ret = -ENOTTY;
+#if DEBUG
+			ofb_debug("CMD_ID_* is not supported, pid:%d tid:%d", data.pid, data.tid);
+#endif
 			break;
 	}
 
@@ -230,8 +241,12 @@ static long sys_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (_IOC_TYPE(cmd) != OFB_MAGIC)
 		return -ENOTTY;
 
-	if (_IOC_NR(cmd) >= CMD_ID_MAX)
-		return -ENOTTY;
+	if (_IOC_NR(cmd) >= CMD_ID_MAX) {
+#if DEBUG
+		ofb_debug("Exceed CMD_ID_MAX");
+#endif
+		return ret;
+	}
 
 	if (copy_from_user(&data, uarg, sizeof(data))) {
 		ofb_debug("invalid address");
@@ -241,15 +256,21 @@ static long sys_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (unlikely(!walt_clusters_parsed))
 		return -EFAULT;
 
-	switch (cmd) {
-		case CMD_ID_BOOST_HIT:
+	/*
+	 * Process variable-sized commands (Frameboost3.0 extend ofb_ctrl_data,
+	 * mask IOCSIZE_MASK segment of cmd for kernel5.4 Inputboost2.0 here).
+	 */
+	switch (cmd & ~IOCSIZE_MASK) {
+		case (CMD_ID_BOOST_HIT & ~IOCSIZE_MASK):
 			if (data.stage == BOOST_MOVE_FG) {
 				ctrl_set_fbg(data.pid, data.tid, data.hwtid1, data.hwtid2);
 			}
 
 			break;
 		default:
-			ret = -ENOTTY;
+#if DEBUG
+			ofb_debug("CMD_ID_* is not supported, pid:%d tid:%d", data.pid, data.tid);
+#endif
 			break;
 	}
 

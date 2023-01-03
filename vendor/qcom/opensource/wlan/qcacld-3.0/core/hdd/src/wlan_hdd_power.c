@@ -1179,12 +1179,27 @@ int wlan_hdd_ipv4_changed(struct notifier_block *nb,
 }
 
 #ifdef FEATURE_RUNTIME_PM
+/* For CPU, the enter & exit latency of the deepest LPM mode(CXPC)
+ * is about ~10ms. so long as required QoS latency is longer than 10ms,
+ * CPU can enter CXPC mode.
+ * The vote value is in microseconds.
+ */
+#define HDD_CPU_CXPC_THRESHOLD (10000)
+static bool wlan_hdd_is_cpu_cxpc_allowed(unsigned long vote)
+{
+	if (vote >= HDD_CPU_CXPC_THRESHOLD)
+		return true;
+	else
+		return false;
+}
+
 int wlan_hdd_pm_qos_notify(struct notifier_block *nb, unsigned long curr_val,
 			   void *context)
 {
 	struct hdd_context *hdd_ctx = container_of(nb, struct hdd_context,
 						   pm_qos_notifier);
 	void *hif_ctx;
+	bool is_any_sta_connected = false;
 
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
 		hdd_debug_rl("Driver Module closed; skipping pm qos notify");
@@ -1197,16 +1212,20 @@ int wlan_hdd_pm_qos_notify(struct notifier_block *nb, unsigned long curr_val,
 		return -EINVAL;
 	}
 
-	hdd_debug("PM QOS update: runtime_pm_prevented %d Current value: %ld",
-		  hdd_ctx->runtime_pm_prevented, curr_val);
+	is_any_sta_connected = hdd_is_any_sta_connected(hdd_ctx);
+
+	hdd_debug("PM QOS update: runtime_pm_prevented %d Current value: %ld, is_any_sta_connected %d",
+		  hdd_ctx->runtime_pm_prevented, curr_val,
+		  is_any_sta_connected);
 	qdf_spin_lock_irqsave(&hdd_ctx->pm_qos_lock);
 
 	if (!hdd_ctx->runtime_pm_prevented &&
-	    curr_val != wlan_hdd_get_pm_qos_cpu_latency()) {
+	    is_any_sta_connected &&
+	    !wlan_hdd_is_cpu_cxpc_allowed(curr_val)) {
 		hif_pm_runtime_get_noresume(hif_ctx, RTPM_ID_QOS_NOTIFY);
 		hdd_ctx->runtime_pm_prevented = true;
 	} else if (hdd_ctx->runtime_pm_prevented &&
-		   curr_val == wlan_hdd_get_pm_qos_cpu_latency()) {
+		   wlan_hdd_is_cpu_cxpc_allowed(curr_val)) {
 		hif_pm_runtime_put(hif_ctx, RTPM_ID_QOS_NOTIFY);
 		hdd_ctx->runtime_pm_prevented = false;
 	}

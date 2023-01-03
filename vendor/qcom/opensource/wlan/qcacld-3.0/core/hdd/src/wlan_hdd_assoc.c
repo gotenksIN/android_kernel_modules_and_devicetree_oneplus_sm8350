@@ -470,6 +470,37 @@ void hdd_abort_ongoing_sta_connection(struct hdd_context *hdd_ctx)
 	}
 }
 
+bool hdd_is_any_sta_connected(struct hdd_context *hdd_ctx)
+{
+	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
+	struct hdd_station_ctx *hdd_sta_ctx;
+	wlan_net_dev_ref_dbgid dbgid =
+				NET_DEV_HOLD_IS_ANY_STA_CONNECTED;
+
+	if (!hdd_ctx) {
+		hdd_err("HDD context is NULL");
+		return false;
+	}
+
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
+		hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+		if (QDF_STA_MODE == adapter->device_mode ||
+		    QDF_P2P_CLIENT_MODE == adapter->device_mode) {
+			if (eConnectionState_Associated ==
+				   hdd_sta_ctx->conn_info.conn_state) {
+				hdd_adapter_dev_put_debug(adapter, dbgid);
+				if (next_adapter)
+					hdd_adapter_dev_put_debug(next_adapter,
+								  dbgid);
+				return true;
+			}
+		}
+		hdd_adapter_dev_put_debug(adapter, dbgid);
+	}
+	return false;
+}
+
 /**
  * hdd_remove_beacon_filter() - remove beacon filter
  * @adapter: Pointer to the hdd adapter
@@ -1500,6 +1531,37 @@ hdd_send_update_beacon_ies_event(struct hdd_adapter *adapter,
 	qdf_mem_free(buff);
 }
 
+static void
+wlan_hdd_runtime_pm_wow_disconnect_handler(struct hdd_context *hdd_ctx)
+{
+	struct hif_opaque_softc *hif_ctx;
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is NULL");
+		return;
+	}
+
+	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+	if (!hif_ctx) {
+		hdd_err("hif_ctx is NULL");
+		return;
+	}
+
+	if (hdd_is_any_sta_connected(hdd_ctx)) {
+		hdd_debug("active connections: runtime pm prevented: %d",
+			  hdd_ctx->runtime_pm_prevented);
+		return;
+	}
+
+	hdd_debug("Runtime allowed : %d", hdd_ctx->runtime_pm_prevented);
+	qdf_spin_lock_irqsave(&hdd_ctx->pm_qos_lock);
+	if (hdd_ctx->runtime_pm_prevented) {
+		hif_pm_runtime_put(hif_ctx, RTPM_ID_QOS_NOTIFY);
+		hdd_ctx->runtime_pm_prevented = false;
+	}
+	qdf_spin_unlock_irqrestore(&hdd_ctx->pm_qos_lock);
+}
+
 /**
  * hdd_send_association_event() - send association event
  * @dev: pointer to net device
@@ -1641,6 +1703,7 @@ static void hdd_send_association_event(struct net_device *dev,
 
 		if ((adapter->device_mode == QDF_STA_MODE) ||
 		    (adapter->device_mode == QDF_P2P_CLIENT_MODE)) {
+			wlan_hdd_runtime_pm_wow_disconnect_handler(hdd_ctx);
 			qdf_copy_macaddr(&peer_macaddr,
 					 &sta_ctx->conn_info.bssid);
 

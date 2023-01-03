@@ -36,18 +36,18 @@ static int get_cluster_num(struct cpufreq_policy *policy)
 
 	cluster_num = topology_physical_package_id(cpu_dev->id);
 	if(cluster_num >= MAX_CLUSTER) {
-		//pr_err("failed to get cluster, as error cluster id, return. \n");
+		pr_err("failed to get cluster, as error cluster id, return. \n");
 		return -1;
 	}
 
 	if (platform_soc_id == SM8350_SOC_ID) {
 		if(*(opp_number + cluster_num) != *(sm8350_cluster_pd + cluster_num)) {
-			//pr_err("opp_number: %d  cluster_pd: %d. \n", *(opp_number + cluster_num), *(sm8350_cluster_pd + cluster_num));
+			//pr_info("opp_number: %d  cluster_pd: %d. \n", *(opp_number + cluster_num), *(sm8350_cluster_pd + cluster_num));
 			return -1;
 		}
 	} else if (platform_soc_id == SM8450_SOC_ID) {
 		if(*(opp_number + cluster_num) != *(sm8450_cluster_pd + cluster_num)) {
-			//pr_err("opp_number: %d  cluster_pd: %d. \n", *(opp_number + cluster_num), *(sm8450_cluster_pd + cluster_num));
+			//pr_info("opp_number: %d  cluster_pd: %d. \n", *(opp_number + cluster_num), *(sm8450_cluster_pd + cluster_num));
 			return -1;
 		}
 	}
@@ -195,7 +195,6 @@ static unsigned int select_effiency_freq(struct cpufreq_policy *policy, unsigned
 	}
 
 	if(abs(loadadj_freq - freq_temp) < affect_thres) {
-		//pr_info("cluster_id = %d loadadj_freq = %d freq_temp = %d  affect_thres = %d \n", cluster_id, loadadj_freq, freq_temp, affect_thres);
 		return freq_temp;
 	}
 
@@ -293,7 +292,6 @@ static int __init cpufreq_effiency_init(void)
 		}
 
 		frequence_opp_init(policy);
-		cpufreq_cpu_put(policy);
 	}
 
 	cpufreq_pd_init();

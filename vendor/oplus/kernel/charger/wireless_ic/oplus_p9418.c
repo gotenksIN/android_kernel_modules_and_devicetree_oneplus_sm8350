@@ -47,7 +47,7 @@
 #include <soc/oplus/system/boot_mode.h>
 
 #define DEBUG_BY_FILE_OPS
-#define P9418_WAIT_TIME 120		/* sec */
+#define P9418_WAIT_TIME 50		/* sec */
 #define POWER_EXPIRED_TIME_DEFAULT 120
 #define CHECK_PRIVATE_DELAY 300
 #define CHECK_IRQ_DELAY 5
@@ -56,12 +56,11 @@
 struct oplus_p9418_ic *p9418_chip = NULL;
 
 static int g_pen_ornot;
-static int g_count;
-struct delayed_work idt_timer_work;
+static struct work_struct idt_timer_work;
+static struct wakeup_source *present_wakelock;
 static unsigned long long g_ble_timeout_cnt = 0;
 static unsigned long long g_verify_failed_cnt = 0;
 static DECLARE_WAIT_QUEUE_HEAD(i2c_waiter);
-
 extern struct oplus_chg_chip *g_oplus_chip;
 extern int oplus_get_idt_en_val(void);
 extern struct oplus_chg_debug_info oplus_chg_debug_info;
@@ -1471,32 +1470,32 @@ void p9418_update_cc_cv(struct oplus_p9418_ic *chip)
 void p9418_timer_inhall_function(struct work_struct *work)
 {
 	struct oplus_p9418_ic *chip = p9418_chip;
+	int count = 0;
 
-	if (chip->is_power_on && chip->present) {/*check present flag */
-		g_count = 0;
+	__pm_stay_awake(present_wakelock);
+
+	chg_err("%s:  enter!\n", __func__);
+
+	while (count++ < P9418_WAIT_TIME && !chip->present && chip->is_power_on) {
+		msleep(100);
+	}
+
+	if (chip->present) {/*check present flag */
+		chg_err("%s:  find pen,count=%d\n", __func__, count);
+		p9418_update_cc_cv(chip);
 		g_pen_ornot = 1;
-	}
-
-	if (g_pen_ornot == 1) {/* pen ,read voltage current return */
-		chg_err("%s:  find pen g_count: %d\n", __func__, g_count);
-		if (chip->i2c_ready) {
-			p9418_update_cc_cv(chip);
-		}
-		g_pen_ornot = 0;
-		return;
-	} else if (g_pen_ornot == 0) {/* not pen continue check */
-		g_count++;
-	}
-
-	if (g_pen_ornot == 0 && g_count >= P9418_WAIT_TIME) {/* no ss int for P9418_WAIT_TIME sec, power off */
-		chg_err("%s:  find not pen g_count: %d\n", __func__, g_count);
+	} else {
+		/* no ss int for P9418_WAIT_TIME sec, power off */
+		chg_err("%s:  find not pen,count=%d\n", __func__, count);
 		p9418_power_enable(chip, false);
-		g_count = 0;
-		return;
+		g_pen_ornot = 0;
 	}
 
-	schedule_delayed_work(&idt_timer_work, round_jiffies_relative(msecs_to_jiffies(500)));
-	chg_err("%s:  exit,g_count:%d", __func__, g_count);
+	__pm_relax(present_wakelock);
+
+	chg_err("%s:  exit!\n", __func__);
+
+	return;
 }
 
 void power_expired_check_func(struct work_struct *work)
@@ -1542,7 +1541,7 @@ static void p9418_do_switch(struct oplus_p9418_ic *chip, uint8_t status)
 		p9418_set_tx_mode(1);
 		chip->power_enable_reason = PEN_REASON_NEAR;
 		chip->tx_start_time = ktime_to_ms(ktime_get());
-		schedule_delayed_work(&idt_timer_work, round_jiffies_relative(msecs_to_jiffies(50)));
+		schedule_work(&idt_timer_work);
 		schedule_delayed_work(&chip->power_check_work, \
 						round_jiffies_relative(msecs_to_jiffies(chip->power_expired_time * MIN_TO_MS)));
 	} else if (status == PEN_STATUS_FAR) {/* hall far, power off */
@@ -1553,10 +1552,9 @@ static void p9418_do_switch(struct oplus_p9418_ic *chip, uint8_t status)
 		chip->private_pkg_data = 0;
 		chip->tx_current = 0;
 		chip->tx_voltage = 0;
-		g_count = 0;
 		update_powerdown_info(chip, PEN_REASON_FAR);
 		chg_err("p9418 hall far away,present value :%d", chip->present);
-		cancel_delayed_work(&idt_timer_work);
+		cancel_work_sync(&idt_timer_work);
 		cancel_delayed_work(&chip->power_check_work);
 		notify_pen_state(0);
 		p9418_send_uevent(chip->wireless_dev, chip->present, chip->ble_mac_addr);
@@ -1640,7 +1638,7 @@ static void p9418_enable_func(struct work_struct *work)
 	chip->power_enable_times++;
 	chip->power_enable_reason = PEN_REASON_RECHARGE;
 	chip->tx_start_time = ktime_to_ms(ktime_get());
-	schedule_delayed_work(&idt_timer_work, round_jiffies_relative(msecs_to_jiffies(50)));
+	schedule_work(&idt_timer_work);
 	cancel_delayed_work(&chip->power_check_work);
 	schedule_delayed_work(&chip->power_check_work, \
 					round_jiffies_relative(msecs_to_jiffies(chip->power_expired_time * MIN_TO_MS)));
@@ -2232,6 +2230,7 @@ static int p9418_driver_probe(struct i2c_client *client, const struct i2c_device
 	p9418_idt_gpio_init(chip);
 	oplus_wpc_chg_parse_chg_dt(chip);
 	chip->bus_wakelock = wakeup_source_register(NULL, "p9418_wireless_wakelock");
+	present_wakelock = wakeup_source_register(NULL, "p9418_present_wakelock");
 
 #ifdef DEBUG_BY_FILE_OPS
 	init_p9418_add_log();
@@ -2239,7 +2238,7 @@ static int p9418_driver_probe(struct i2c_client *client, const struct i2c_device
 #endif
 
 	INIT_DELAYED_WORK(&chip->p9418_update_work, p9418_update_work_process);
-	INIT_DELAYED_WORK(&idt_timer_work, p9418_timer_inhall_function);
+	INIT_WORK(&idt_timer_work, p9418_timer_inhall_function);
 	INIT_DELAYED_WORK(&chip->power_check_work, power_expired_check_func);
 	INIT_DELAYED_WORK(&chip->check_point_dwork, p9418_check_point_function);
 	INIT_WORK(&chip->power_enable_work, p9418_enable_func);

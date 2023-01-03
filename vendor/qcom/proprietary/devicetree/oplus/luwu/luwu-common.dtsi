@@ -1490,6 +1490,21 @@
 	status = "ok";
 };
 
+&soc {
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <1>;
+		track,wls_max_power = <30000>;
+		track,wired_max_power = <80000>;
+		track,wls_bpp_chg_scheme = <0>;
+		track,wls_epp_chg_scheme = <0>;
+		track,wls_fast_chg_scheme = <0>;
+		track,wired_fast_chg_scheme = <1>;
+	};
+};
+
 &usb2_phy0 {
 	qcom,param-override-seq =
 		<0xe7 0x6c
@@ -2163,6 +2178,7 @@
 		platform_support_project_dir = <20031>;
 		platform_support_project_commandline = "mdss_dsi_oplus19065_samsung_1440_3168_dsc_cmd";
 		platform_support_project_external_name = "BD368";
+		panel = <&dsi_oplus19065_samsung_1440_3168_dsc_cmd>;
 
 		touchpanel,elimination-range = <20 200 200>;
 		prevention,no_handle_para = <0 0 0>;
@@ -2261,6 +2277,11 @@
 		platform_support_project = <20031 20311 21005 21205>;
 		platform_support_project_dir = <21005 21005 21005 21005>;
 		platform_support_project_commandline = "mdss_dsi_oplus21005_boe_1080_2400_dsc_cmd","mdss_dsi_oplus21005_boe_nt37701a_1080_2400_dsc_cmd";
+		panel = <&dsi_oplus21005_boe_1080_2400_dsc_cmd
+		         &dsi_oplus21005_boe_1080_2400_dsc_cmd_dvt
+		         &dsi_oplus21005_boe_1080_2400_dsc_cmd_evt1
+		         &dsi_oplus21005_boe_nt37701a_1080_2400_dsc_cmd
+		         &dsi_oplus21005_boe_nt37701a_1080_2400_dsc_cmd_pvt>;
 
 		prevention,curved_screen_V2;
 		prevention,grip_disable_level = <6>;
@@ -2303,6 +2324,7 @@
 		black_gesture_indep_support;
 		health_monitor_support;
 		snr_read_support;
+		exception_upload_support;
 
 		/*
 		 *Virtual Key Config:

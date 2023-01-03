@@ -328,6 +328,11 @@ uint8_t    EEPROM_Sem1215sWrite(struct cam_eeprom_ctrl_t *e_ctrl,
         = (struct cam_sensor_i2c_reg_array *)kmalloc((sizeof(struct cam_sensor_i2c_reg_array) * SEMCO_EEPROM_PACK_SIZE),
         GFP_KERNEL);
 
+    if (i2c_reg_arrays == NULL) {
+        CAM_ERR(CAM_EEPROM, "i2c_reg_arrays kmalloc failed!");
+        return -EINVAL;
+    }
+
     if (e_ctrl == NULL) {
         CAM_ERR(CAM_EEPROM, "Invalid Args");
         kfree(i2c_reg_arrays);

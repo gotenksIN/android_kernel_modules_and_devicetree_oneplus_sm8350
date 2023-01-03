@@ -83,6 +83,7 @@
 #define BQ2589X_ICO_DISABLE         0
 #define BQ2589X_HVDCPEN_MASK        0x08
 #define BQ2589X_HVDCPEN_SHIFT       3
+#define BQ2589X_HVDCPHV_SHIFT       2
 #define BQ2589X_HVDCP_ENABLE        1
 #define BQ2589X_HVDCP_DISABLE       0
 #define BQ2589X_MAXCEN_MASK         0x04

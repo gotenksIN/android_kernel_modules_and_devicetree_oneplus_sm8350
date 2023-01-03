@@ -5829,6 +5829,7 @@ static int __cam_isp_ctx_handle_irq_in_activated(void *context,
 				notify.trigger = CAM_TRIGGER_POINT_RDI_SOF;
 				notify.req_id = ctx_isp->req_info.last_bufdone_req_id;
 				notify.sof_timestamp_val = ctx_isp->sof_timestamp_val;
+				notify.trigger_id = ctx_isp->trigger_id;
 
 				ctx->ctx_crm_intf->notify_trigger(&notify);
 				CAM_DBG(CAM_ISP, "Notify CRM  RDI SOF frame %lld",

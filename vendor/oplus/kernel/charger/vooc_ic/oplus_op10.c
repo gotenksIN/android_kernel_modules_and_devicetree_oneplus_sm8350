@@ -29,7 +29,9 @@
 
 //#include <mt-plat/battery_meter.h>
 #include <linux/module.h>
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 #include <soc/oplus/device_info.h>
+#endif
 
 #else
 #include <linux/i2c.h>
@@ -48,7 +50,9 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/regulator/machine.h>
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 #include <soc/oplus/device_info.h>
+#endif
 #endif
 #include "oplus_vooc_fw.h"
 #include "../oplus_pps.h"
@@ -481,10 +485,6 @@ int op10_pps_mos_ctrl(int on)
 		ovp_flag =  DISABLE_OVP_AND_WDT_FLAG;
 		//ret = oplus_i2c_dma_write(the_chip->client, REG_HOST, 4, (u8 *)(&ovp_flag));
 		ret = oplus_vooc_i2c_write(the_chip->client, REG_HOST, 4, (u8 *)(&ovp_flag));
-		if (ret < 0) {
-			printk("op10_pps_mos_ctrl write REG_HOST fail\n");
-			return -1;
-		}
 		printk("op10_pps_mos_ctrl disable flags:0x%x, ret:%d\n", ovp_flag, ret);
 		if (ret < 0) {
 			for (i=0; i<3; i++) {
@@ -497,6 +497,8 @@ int op10_pps_mos_ctrl(int on)
 		}
 		if(ret >= 0){
 			printk("op10_pps_mos_ctrl disable success\n");
+		} else {
+			printk("op10_pps_mos_ctrl write REG_HOST fail\n");
 		}
 	}
 
@@ -830,15 +832,16 @@ struct oplus_vooc_operations oplus_op10_ops = {
 	.update_temperature_soc = op10_update_temperature_soc,
 };
 
-struct oplus_pps_mcu_operations oplus_op10_pps_ops = {
+/*struct oplus_pps_mcu_operations oplus_op10_pps_ops = {
 	.get_input_volt = op10_read_input_voltage,
 	.get_vbat0_volt = op10_read_vbat0_voltage,
 	.check_btb_temp = op10_check_btb_temp,
 	.pps_mos_ctrl = op10_pps_mos_ctrl,
-};
+};*/
 
 static void register_vooc_devinfo(void)
 {
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 	int ret = 0;
 	char *version;
 	char *manufacture;
@@ -850,6 +853,7 @@ static void register_vooc_devinfo(void)
 	if (ret) {
 		chg_err(" fail\n");
 	}
+#endif
 }
 
 static int op10_parse_fw_from_dt(struct oplus_vooc_chip *chip)
@@ -1027,7 +1031,7 @@ static int op10_driver_probe(struct i2c_client *client, const struct i2c_device_
 	else
 		op10_parse_fw_from_array(chip);
 
-	oplus_pps_register_ops(&oplus_op10_pps_ops);
+	/*oplus_pps_register_ops(&oplus_op10_pps_ops);*/
 
 	chip->vops = &oplus_op10_ops;
 	chip->fw_mcu_version = 0;
@@ -1054,6 +1058,8 @@ static int op10_driver_probe(struct i2c_client *client, const struct i2c_device_
 	register_vooc_devinfo();
 
 	init_proc_vooc_fw_check();
+
+	oplus_vooc_bcc_curves_init(chip);
 
 	the_chip = chip;
 	chg_debug("op10 success\n");

@@ -10,6 +10,10 @@
 #include <linux/workqueue.h>
 #include <linux/version.h>
 #include <linux/thermal.h>
+#include "oplus_chg_core.h"
+#if __and(IS_MODULE(CONFIG_OPLUS_CHG), IS_MODULE(CONFIG_OPLUS_CHG_V2))
+#include "oplus_chg_symbol.h"
+#endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
 #include <linux/wakelock.h>
@@ -18,7 +22,11 @@
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 #include <linux/i2c.h>
 //#include <mt-plat/battery_meter.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 #include <mt-plat/mtk_boot.h>
+#else
+#include <mt-plat/mtk_boot_common.h>
+#endif
 #ifdef CONFIG_OPLUS_CHARGER_MTK6779
 #include "charger_ic/oplus_battery_mtk6779.h"
 #endif
@@ -70,6 +78,18 @@
 #ifdef CONFIG_OPLUS_CHARGER_MTK6781
 #include "charger_ic/oplus_battery_mtk6781R.h"
 #endif
+#ifdef CONFIG_OPLUS_CHARGER_MTK6983S
+#include "charger_ic/oplus_battery_mtk6983S.h"
+#endif
+#ifdef CONFIG_OPLUS_CHARGER_MTK6895S
+#include "charger_ic/oplus_battery_mtk6983S.h"
+#endif
+#ifdef CONFIG_OPLUS_CHARGER_MTK6789S
+#include "charger_ic/oplus_battery_mtk6789S.h"
+#endif
+#ifdef CONFIG_OPLUS_CHARGER_MTK6985S
+#include "charger_ic/oplus_battery_mtk6985S.h"
+#endif
 #else /* CONFIG_OPLUS_CHARGER_MTK */
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
@@ -78,7 +98,9 @@
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/msm_bcl.h>
 #endif
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 #include <soc/oplus/system/boot_mode.h>
+#endif
 #ifdef CONFIG_OPLUS_MSM8953N_CHARGER
 #include "charger_ic/oplus_battery_msm8953_N.h"
 #elif defined CONFIG_OPLUS_MSM8953_CHARGER
@@ -113,6 +135,11 @@
 #include "charger_ic/oplus_battery_msm7250_R.h"
 #elif defined CONFIG_OPLUS_SM8350_CHARGER
 #include "charger_ic/oplus_battery_sm8350.h"
+#elif defined CONFIG_OPLUS_SM8450_CHARGER
+#include "charger_ic/oplus_battery_sm8450.h"
+#define PLATFORM_SUPPORT_TIMESPEC	1
+#elif defined CONFIG_OPLUS_SM8550_CHARGER
+#include "charger_ic/oplus_battery_sm8550.h"
 #elif defined CONFIG_OPLUS_SM6375R_CHARGER
 #include "charger_ic/oplus_battery_sm6375.h"
 #else /* CONFIG_OPLUS_MSM8953_CHARGER */
@@ -122,11 +149,103 @@
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
+#elif IS_ENABLED(CONFIG_DRM_MSM) || IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY)
+#include <linux/msm_drm_notify.h>
 #elif IS_ENABLED(CONFIG_FB)
 #include <linux/notifier.h>
 #include <linux/fb.h>
-#elif IS_ENABLED(CONFIG_DRM_MSM) || IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY)
-#include <linux/msm_drm_notify.h>
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_PANEL_NOTIFY)
+#include <linux/soc/qcom/panel_event_notifier.h>
+#include <drm/drm_panel.h>
+#endif
+#include "oplus_chg_track.h"
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+#ifndef PLATFORM_SUPPORT_TIMESPEC
+#include <uapi/linux/rtc.h>
+
+#ifdef __KERNEL__
+#ifndef _STRUCT_TIMESPEC
+#define _STRUCT_TIMESPEC
+struct timespec {
+	__kernel_old_time_t	tv_sec;		/* seconds */
+	long			tv_nsec;	/* nanoseconds */
+};
+#endif
+
+struct timeval {
+	__kernel_old_time_t	tv_sec;		/* seconds */
+	__kernel_suseconds_t	tv_usec;	/* microseconds */
+};
+
+struct itimerspec {
+	struct timespec it_interval;/* timer period */
+	struct timespec it_value;	/* timer expiration */
+};
+
+struct itimerval {
+	struct timeval it_interval;/* timer interval */
+	struct timeval it_value;	/* current value */
+};
+#endif
+
+extern time64_t rtc_tm_to_time64(struct rtc_time *tm);
+extern void rtc_time64_to_tm(time64_t time, struct rtc_time *tm);
+
+static inline void rtc_time_to_tm(unsigned long time, struct rtc_time *tm)
+{
+	rtc_time64_to_tm(time, tm);
+}
+
+static inline int rtc_tm_to_time(struct rtc_time *tm, unsigned long *time)
+{
+	*time = rtc_tm_to_time64(tm);
+
+	return 0;
+}
+
+#if __BITS_PER_LONG == 64
+/* timespec64 is defined as timespec here */
+static inline struct timespec timespec64_to_timespec(const struct timespec64 ts64)
+{
+	return *(const struct timespec *)&ts64;
+}
+
+static inline struct timespec64 timespec_to_timespec64(const struct timespec ts)
+{
+	return *(const struct timespec64 *)&ts;
+}
+
+#else
+static inline struct timespec timespec64_to_timespec(const struct timespec64 ts64)
+{
+	struct timespec ret;
+
+	ret.tv_sec = (time_t)ts64.tv_sec;
+	ret.tv_nsec = ts64.tv_nsec;
+	return ret;
+}
+
+static inline struct timespec64 timespec_to_timespec64(const struct timespec ts)
+{
+	struct timespec64 ret;
+
+	ret.tv_sec = ts.tv_sec;
+	ret.tv_nsec = ts.tv_nsec;
+	return ret;
+}
+#endif
+
+static inline void getnstimeofday(struct timespec *ts)
+{
+	struct timespec64 ts64;
+
+	ktime_get_real_ts64(&ts64);
+	*ts = timespec64_to_timespec(ts64);
+}
+#endif /*PLATFORM_SUPPORT_TIMESPEC*/
 #endif
 
 #define CHG_LOG_CRTI 1
@@ -214,6 +333,13 @@
 
 #define TEMPERATURE_INVALID	-2740
 
+#define PDO_9V         9000
+#define PDO_5V         5000
+#define PDO_2A         2000
+#define PDO_3A         2000
+
+#define FG_I2C_ERROR   -400
+
 #define chg_debug(fmt, ...) \
         printk(KERN_NOTICE "[OPLUS_CHG][%s]"fmt, __func__, ##__VA_ARGS__)
 
@@ -246,6 +372,7 @@ typedef enum {
 	CHG_STOP_VOTER__MAX_CHGING_TIME		=	(1 << 3),
 	CHG_STOP_VOTER__FULL				=	(1 << 4),
 	CHG_STOP_VOTER__VBAT_OVP			=	(1 << 5),
+	CHG_STOP_VOTER_BAD_VOL_DIFF 		=	(1 << 6),
 }OPLUS_CHG_STOP_VOTER;
 
 typedef enum {
@@ -321,6 +448,7 @@ typedef enum {
 	CHARGER_SUBTYPE_PD,
 	CHARGER_SUBTYPE_QC,
 	CHARGER_SUBTYPE_PPS,
+	CHARGER_SUBTYPE_UFCS,
 	CHARGER_SUBTYPE_PE20
 }OPLUS_CHARGER_SUBTYPE;
 
@@ -347,6 +475,20 @@ typedef enum {
 	AP_DUAL_CP_VOOCPHY,
 	INVALID_VOOCPHY,
 } OPLUS_VOOCPHY_TYPE;
+
+typedef enum {
+	NO_VOOC = 0,
+	VOOC,
+	DUAL_BATT_50W,
+	DUAL_BATT_65W,
+	SINGLE_BATT_50W,
+	VOOCPHY_33W,
+	VOOCPHY_60W,
+	DUAL_BATT_80W,
+	DUAL_BATT_100W,
+	DUAL_BATT_150W,
+	INVALID_VOOC_PROJECT,
+} OPLUS_VOOC_PROJECT_TYPE;
 
 typedef enum {
 	OPLUS_USBTEMP_TIMER_STAGE0 = 0,
@@ -383,6 +525,7 @@ struct tbatt_anti_shake {
 };
 
 struct oplus_chg_limits {
+	int force_input_current_ma;
 	int input_current_cdp_ma;
 	int input_current_charger_ma;
 	int pd_input_current_charger_ma;
@@ -685,6 +828,30 @@ struct short_c_batt_data {
 	bool shortc_gpio_status;
 };
 
+struct reserve_soc_data {
+	#define SMOOTH_SOC_MAX_FIFO_LEN		4
+	#define SMOOTH_SOC_MIN_FIFO_LEN		1
+	#define RESERVE_SOC_MIN 		1
+	#define RESERVE_SOC_DEFAULT 		3
+	#define RESERVE_SOC_MAX 		5
+	#define RESERVE_SOC_OFF 		0
+	#define OPLUS_FULL_SOC			100
+	#define OPLUS_FULL_CNT			36 /* 180S/5 */
+
+	bool smooth_switch_v2;
+	int reserve_chg_soc;
+	int reserve_dis_soc;
+	int reserve_soc;
+	int rus_chg_soc;
+	int rus_dis_soc;
+
+	int smooth_soc_fifo[SMOOTH_SOC_MAX_FIFO_LEN];
+	int smooth_soc_index;
+	int smooth_soc_avg_cnt;
+	int soc_jump_array[RESERVE_SOC_MAX];
+	bool is_soc_jump_range;
+};
+
 struct oplus_chg_chip {
 	struct i2c_client *client;
 	struct device *dev;
@@ -696,6 +863,10 @@ struct oplus_chg_chip {
 	struct power_supply_config usb_cfg;
 	struct power_supply_desc battery_psd;
 	struct power_supply *usb_psy;
+	struct power_supply_desc wls_psd;
+	struct power_supply *wls_psy;
+	struct oplus_chg_mod *wls_ocm;
+	struct oplus_chg_mod *comm_ocm;
 #ifndef CONFIG_OPLUS_CHARGER_MTK
 	struct qcom_pmic pmic_spmi;
 #endif
@@ -705,6 +876,7 @@ struct oplus_chg_chip {
 	struct power_supply	*batt_psy;
 /*	struct battery_data battery_main	*/
 	struct delayed_work update_work;
+	struct delayed_work aging_check_work;
 	struct delayed_work ui_soc_decimal_work;
 	struct delayed_work  mmi_adapter_in_work;
 	struct delayed_work  reset_adapter_work;
@@ -728,6 +900,7 @@ struct oplus_chg_chip {
 	bool wpc_no_chargerpump;
 	bool charger_exist;
 	int charger_type;
+	int charger_subtype;
 	int real_charger_type;
 	int charger_volt;
 	int charger_volt_pre;
@@ -753,6 +926,8 @@ struct oplus_chg_chip {
 	int batt_volt_min;
 	int vbatt_power_off;
 	int vbatt_soc_1;
+	int soc_to_0_withchg;
+	int soc_to_0_withoutchg;
 	int icharging;
 	int charger_cycle;
 	int ibus;
@@ -784,9 +959,12 @@ struct oplus_chg_chip {
 	int  tbatt_when_full;
 	bool chging_on;
 	bool in_rechging;
+	bool adsp_notify_ap_suspend;
+	bool first_enabled_adspvoocphy;
 	int charging_state;
 	int total_time;
 	unsigned long sleep_tm_sec;
+	unsigned long save_sleep_tm_sec;
 	bool vbatt_over;
 	bool chging_over_time;
 	int vchg_status;
@@ -797,6 +975,8 @@ struct oplus_chg_chip {
 	int notify_code;
 	int notify_flag;
 	int cool_down;
+	int normal_cool_down;
+	int smart_normal_cool_down;
 	int smart_charge_user;
 	int usbtemp_cool_down;
 	bool usbtemp_check;
@@ -840,6 +1020,14 @@ struct oplus_chg_chip {
 	bool healthd_ready;
 #if IS_ENABLED(CONFIG_FB) || IS_ENABLED(CONFIG_DRM_MSM) || IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY)
 	struct notifier_block chg_fb_notify;
+#elif IS_ENABLED(CONFIG_OPLUS_MTK_DRM_GKI_NOTIFY_CHG)
+	struct notifier_block chg_fb_notify;
+#endif
+#if IS_ENABLED(CONFIG_DRM_PANEL_NOTIFY)
+	struct drm_panel *active_panel;
+	struct drm_panel *active_panel_sec;
+	void *notifier_cookie;
+	void *notifier_cookie_sec;
 #endif
 	struct normalchg_gpio_pinctrl normalchg_gpio;
 	int flash_screen_ctrl_status;
@@ -852,6 +1040,7 @@ struct oplus_chg_chip {
 	bool ffc_support;
 	bool dual_ffc;
 	int voocphy_support;
+	bool voocphy_support_display_vooc;
 	bool fg_info_package_read_support;
 	bool new_ui_warning_support;
 	bool fastchg_to_ffc;
@@ -887,6 +1076,10 @@ struct oplus_chg_chip {
 	int len_array;
 	wait_queue_head_t oplus_usbtemp_wq;
 	int usbtemp_batttemp_gap;
+	int usbtemp_batttemp_recover_gap;
+	int usbtemp_batttemp_current_gap;
+	bool usbtemp_change_gap;
+	int usbtemp_max_temp_diff;
 	int usbtemp_cool_down_temp_gap;
 	int usbtemp_cool_down_temp_first_gap;
 	int usbtemp_cool_down_temp_second_gap;
@@ -924,7 +1117,10 @@ struct oplus_chg_chip {
 	int ship_mode_config;
 	bool flash_led_status;
 	char batt_type_string[4];
+	bool bat_volt_different;
+	int check_battery_vol_count;
 	bool is_abnormal_adapter;
+	bool bidirect_abnormal_adapter;
 	bool support_abnormal_adapter;
 	bool icon_debounce;
 	int abnormal_adapter_dis_cnt;
@@ -948,6 +1144,7 @@ struct oplus_chg_chip {
 	bool screen_off_control_by_batt_temp;
 	bool vooc_enable_charger_first;
 	bool old_smart_charge_standard;
+	bool pd_adapter_support_9v;
 	OPLUS_USBTEMP_TIMER_STAGE usbtemp_timer_stage;
 
 	bool smart_chg_bcc_support;
@@ -955,10 +1152,53 @@ struct oplus_chg_chip {
 	int bcc_cool_down;
 	struct mutex bcc_curr_done_mutex;
 	int bcc_curr_done;
+	bool usbtemp_dischg_by_pmic;
 	int transfer_timeout_count;
+
+	bool vooc_start_fail;
+	bool gauge_iic_err;
+	unsigned long gauge_iic_err_time_record;
+	int pd_authentication;
+	bool pps_force_svooc;
+	bool support_3p6_standard;
+	bool suport_pd_9v2a;
+	struct timespec quick_mode_time;
+	int start_time;
+	int quick_mode_gain_time_ms;
+	int start_cap;
+	int stop_cap;
+	bool dual_panel_support;
+
+	int uisoc_1_start_batt_rm;
+	int uisoc_1_start_vbatt_max;
+	int uisoc_1_start_vbatt_min;
+	int uisoc_1_start_time;
+	int debug_vbat_keep_soc_1;
+	int debug_force_uisoc_less_than_2;
+	int debug_force_vbatt_too_low;
+	int debug_force_usbtemp_trigger;
+	int debug_force_fast_gpio_err;
+	int debug_force_cooldown_match_trigger;
+	char chg_power_info[OPLUS_CHG_TRACK_CURX_INFO_LEN];
+	char err_reason[OPLUS_CHG_TRACK_DEVICE_ERR_NAME_LEN];
+	bool cool_down_check_done;
+	struct mutex track_upload_lock;
+
+	oplus_chg_track_trigger fast_gpio_err_load_trigger;
+	struct delayed_work fast_gpio_err_load_trigger_work;
+	oplus_chg_track_trigger uisoc_keep_1_t_load_trigger;
+	struct delayed_work uisoc_keep_1_t_load_trigger_work;
+	oplus_chg_track_trigger vbatt_too_low_load_trigger;
+	struct delayed_work vbatt_too_low_load_trigger_work;
+	oplus_chg_track_trigger usbtemp_load_trigger;
+	struct delayed_work usbtemp_load_trigger_work;
+	oplus_chg_track_trigger vbatt_diff_over_load_trigger;
+	struct delayed_work vbatt_diff_over_load_trigger_work;
+	oplus_chg_track_trigger cool_down_match_err_load_trigger;
+	struct delayed_work cool_down_match_err_load_trigger_work;
+	struct reserve_soc_data rsd;
+	bool is_gauge_ready;
 };
-
-
 
 struct oplus_chg_operations {
 	void(*get_props_from_adsp_by_buffer)(void);
@@ -969,6 +1209,7 @@ struct oplus_chg_operations {
 	void (*really_suspend_charger)(bool en);
 	bool (*oplus_usbtemp_monitor_condition)(void);
 	int (*recovery_usbtemp)(void *data);
+	int (*set_dischg_enable)(bool en);
 	void (*dump_registers)(void);
 	int (*kick_wdt)(void);
 	int (*hardware_init)(void);
@@ -1071,6 +1312,7 @@ struct oplus_chg_operations {
 	bool (*check_qchv_condition)(void);
 	int (*set_bcc_curr_to_voocphy)(int bcc_curr);
 	bool (*is_support_qcpd)(void);
+	int (*get_subboard_temp)(void);
 };
 
 int __attribute__((weak)) ppm_sys_boost_min_cpu_freq_set(int freq_min, int freq_mid, int freq_max, unsigned int clear_time)
@@ -1087,6 +1329,25 @@ bool __attribute__((weak)) get_ppm_freq_info(void)
 {
 	return true;
 }
+
+#ifdef CONFIG_DISABLE_OPLUS_FUNCTION
+unsigned int __attribute__((weak)) get_eng_version(void)
+{
+	return 0;
+}
+unsigned int __attribute__((weak)) get_PCB_Version(void)
+{
+	return 0;
+}
+unsigned int __attribute__((weak)) get_project(void)
+{
+	return -1;
+}
+int __attribute__((weak)) get_boot_mode(void)
+{
+	return 0;
+}
+#endif
 
 /*********************************************
  * power_supply usb/ac/battery functions
@@ -1121,6 +1382,7 @@ void oplus_charger_detect_check(struct oplus_chg_chip *chip);
 int oplus_chg_get_prop_batt_health(struct oplus_chg_chip *chip);
 
 bool oplus_chg_wake_update_work(void);
+void oplus_chg_input_current_recheck_work(void);
 void oplus_chg_soc_update_when_resume(unsigned long sleep_tm_sec);
 void oplus_chg_soc_update(void);
 int oplus_chg_get_batt_volt(void);
@@ -1175,8 +1437,10 @@ void oplus_chg_turn_on_charging(struct oplus_chg_chip *chip);
 void oplus_chg_turn_on_charging_in_work(void);
 void oplus_chg_turn_off_charging(struct oplus_chg_chip *chip);
 int oplus_chg_get_cool_down_status(void);
+int oplus_chg_get_normal_cool_down_status(void);
 void oplus_smart_charge_by_cool_down(struct oplus_chg_chip *chip, int val);
 int oplus_convert_current_to_level(struct oplus_chg_chip *chip, int val);
+int oplus_convert_pps_current_to_level(struct oplus_chg_chip *chip, int val);
 void oplus_smart_charge_by_shell_temp(struct oplus_chg_chip *chip, int val);
 int oplus_smart_charge_by_bcc(struct oplus_chg_chip *chip, int val);
 int oplus_chg_override_by_shell_temp(int temp);
@@ -1221,7 +1485,7 @@ void oplus_chg_get_props_from_adsp_by_buffer(void);
 bool oplus_get_flash_screen_ctrl(void);
 int set_soc_feature(void);
 bool oplus_chg_check_disable_charger(void);
-
+bool oplus_chg_is_wls_present(void);
 struct oplus_chg_chip *oplus_chg_get_chg_struct(void);
 
 void oplus_chg_check_break(int vbus_rising);
@@ -1271,10 +1535,17 @@ int oplus_chg_otg_wait_vbus_decline(void);
 bool oplus_chg_get_wait_for_ffc_flag(void);
 void oplus_chg_set_wait_for_ffc_flag(bool wait_for_ffc);
 void oplus_chg_set_force_psy_changed(void);
+bool oplus_chg_get_bcc_support(void);
 void oplus_chg_check_bcc_curr_done(void);
 int oplus_chg_get_bcc_curr_done_status(void);
 void oplus_chg_vooc_timeout_callback(bool vbus_rising);
 void oplus_chg_really_suspend_charger(bool en);
 bool oplus_is_ptcrb_version(void);
+void  oplus_chg_set_adsp_notify_ap_suspend(void);
+bool  oplus_chg_get_adsp_notify_ap_suspend(void);
+int oplus_chg_get_mmi_value(void);
+int oplus_chg_get_stop_chg(void);
+bool oplus_get_vooc_start_fg(void);
+int oplus_chg_get_fv_when_vooc(struct oplus_chg_chip *chip);
 //#endif
 #endif /*_OPLUS_CHARGER_H_*/

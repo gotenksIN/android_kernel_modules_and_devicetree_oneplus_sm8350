@@ -65,7 +65,7 @@
 #define LITO 2
 #define TRINKET 3
 
-#if defined(CONFIG_OPPO_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
+#if defined(CONFIG_OPLUS_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
 
 int wakeup_reasons_statics(const char *irq_name, int choose_flag);
 void wakeup_reasons_clear(int choose_flag);

@@ -3,6 +3,11 @@
 ** File : oplus_display_panel.c
 ** Description : oplus display panel char dev  /dev/oplus_panel
 ** Version : 1.0
+** Date : 2020/06/13
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -83,8 +88,12 @@ static const struct panel_ioctl_desc panel_ioctls[] = {
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_CABC_STATUS, oplus_display_get_cabc_status),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DRE_STATUS, oplus_display_set_dre_status),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_DRE_STATUS, oplus_display_get_dre_status),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_QCOM_LOG_LEVEL, oplus_display_set_qcom_loglevel),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANEL_ROUND_CORNER, oplus_display_get_panel_round_corner),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_PANEL_ROUND_CORNER, oplus_display_set_panel_round_corner),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_SHUTDOWN_FLAG, oplus_display_set_shutdown_flag),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FP_TYPE, oplus_ofp_set_fp_type),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_FP_TYPE, oplus_ofp_get_fp_type),
 };
 
 int oplus_display_fix_apollo_level(void)

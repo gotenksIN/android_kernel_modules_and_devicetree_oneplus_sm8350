@@ -73,6 +73,7 @@ struct sensor_fb_conf g_fb_conf[] = {
 	{ACCEL_FIRST_REPORT_DELAY_COUNT_ID, "device_acc_rpt_delay", SENSOR_DEBUG_DEVICE_TYPE},
 	{ACCEL_ORIGIN_DATA_TO_ZERO_ID, "device_acc_to_zero", SENSOR_DEBUG_DEVICE_TYPE},
 	{ACCEL_CALI_DATA_ID, "device_acc_cali_data", SENSOR_DEBUG_DEVICE_TYPE},
+	{ACCEL_DATA_BLOCK_ID, "device_acc_data_block", SENSOR_DEBUG_DEVICE_TYPE},
 
 
 	{GYRO_INIT_FAIL_ID, "device_gyro_init_fail", SENSOR_DEVICE_TYPE},
@@ -153,7 +154,7 @@ static ssize_t adsp_notify_show(struct device *dev,
 	adsp_event_counts = sensor_fb_cxt->adsp_event_counts;
 	spin_unlock(&sensor_fb_cxt->rw_lock);
 	pr_info("adsp_value = %d\n", adsp_event_counts);
-	return snprintf(buf, PAGE_SIZE, "%d\n", adsp_event_counts);
+	return snprintf(buf, PAGE_SIZE, "%hu\n", adsp_event_counts);
 }
 
 static ssize_t adsp_notify_store(struct device *dev,

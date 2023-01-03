@@ -1617,9 +1617,13 @@ close_time:
 }
 #endif /* CONFIG_OPLUS_RTC_DET_SUPPORT */
 
+#define SY6974B_VBUS_MIN_MV	3500
 void sy6974b_vooc_timeout_callback(bool vbus_rising)
 {
 	struct chip_sy6974b *chip = charger_ic;
+	int rc = 0;
+	int reg_data = 0;
+	int vbus_volt = 0;
 
 	if (!chip) {
 		return;
@@ -1634,6 +1638,21 @@ void sy6974b_vooc_timeout_callback(bool vbus_rising)
 		chip->oplus_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
 		oplus_set_usb_props_type(chip->oplus_charger_type);
 		sy6974b_set_wdt_timer(REG05_SY6974B_WATCHDOG_TIMER_DISABLE);
+	}
+
+	if (atomic_read(&chip->driver_suspended) == 0) {
+		rc = sy6974b_read_reg(chip, REG00_SY6974B_ADDRESS, &reg_data);
+		if (rc == 0) {
+			vbus_volt = sy6974b_get_vbus_voltage();
+			chg_err("reg00=0x%02x vbus_rising=%d vbus_volt=%d\n",
+				reg_data, vbus_rising, vbus_volt);
+			if ((reg_data & REG00_SY6974B_SUSPEND_MODE_MASK) == REG00_SY6974B_SUSPEND_MODE_DISABLE) {
+				if (!vbus_rising)
+					oplus_chg_check_break(false);
+			} else if (vbus_volt < SY6974B_VBUS_MIN_MV) {
+				oplus_chg_check_break(false);
+			}
+		}
 	}
 	sy6974b_dump_registers();
 }
@@ -1937,6 +1956,7 @@ static void sy6974b_get_bc12(struct chip_sy6974b *chip)
 				chip->oplus_charger_type = POWER_SUPPLY_TYPE_USB_DCP;
 			} else {
 				chip->oplus_charger_type = POWER_SUPPLY_TYPE_USB;
+				oplus_vooc_set_detach_unexpectly(false);
 			}
 			oplus_set_usb_props_type(chip->oplus_charger_type);
 			oplus_chg_wake_update_work();
@@ -1955,6 +1975,7 @@ static void sy6974b_get_bc12(struct chip_sy6974b *chip)
 				chip->oplus_charger_type = POWER_SUPPLY_TYPE_USB_DCP;
 			} else {
 				chip->oplus_charger_type = POWER_SUPPLY_TYPE_USB_CDP;
+				oplus_vooc_set_detach_unexpectly(false);
 			}
 			oplus_set_usb_props_type(chip->oplus_charger_type);
 			oplus_chg_wake_update_work();
@@ -1995,6 +2016,8 @@ static irqreturn_t sy6974b_irq_handler(int irq, void *data)
 	struct chip_sy6974b *chip = (struct chip_sy6974b *)data;
 	bool prev_pg = false, curr_pg = false, bus_gd = false;
 	struct oplus_chg_chip *g_oplus_chip = oplus_chg_get_chg_struct();
+	int rc = 0;
+	int reg_data = 0;
 
 	if (!chip)
 		return IRQ_HANDLED;
@@ -2009,7 +2032,17 @@ static irqreturn_t sy6974b_irq_handler(int irq, void *data)
 	prev_pg = chip->power_good;
 	curr_pg = bus_gd = sy6974b_get_bus_gd();
 	sy6974b_dump_registers();
-	oplus_chg_check_break(bus_gd);
+
+	if (atomic_read(&chip->driver_suspended) == 0) {
+		rc = sy6974b_read_reg(chip, REG00_SY6974B_ADDRESS, &reg_data);
+		if (rc == 0 &&
+		    (reg_data & REG00_SY6974B_SUSPEND_MODE_MASK) == REG00_SY6974B_SUSPEND_MODE_DISABLE) {
+			if (!prev_pg && curr_pg)
+				oplus_chg_check_break(true);
+			else if (prev_pg && !curr_pg)
+				oplus_chg_check_break(false);
+		}
+	}
 	if (oplus_vooc_get_fastchg_started() == true
 			&& oplus_vooc_get_adapter_update_status() != 1) {
 		chg_err("oplus_vooc_get_fastchg_started = true!(%d %d)\n", prev_pg, curr_pg);

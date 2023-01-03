@@ -3,6 +3,11 @@
 ** File : oplus_display_panel_common.c
 ** Description : oplus display panel common feature
 ** Version : 1.0
+** Date : 2020/06/13
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
 #include "oplus_display_panel_common.h"
 #include <linux/notifier.h>
@@ -34,6 +39,7 @@ int mca_mode = 1;
 extern int oplus_dimlayer_hbm;
 extern int oplus_dimlayer_bl;
 extern int dither_enable;
+extern int shutdown_flag;
 
 enum {
 	REG_WRITE = 0,
@@ -488,7 +494,9 @@ int oplus_display_panel_get_serial_number(void *buf) {
 		} else {
 			panel_serial_info.year		= (read[panel_serial_info.reg_index] & 0xF0) >> 0x4;
 			if (!strcmp(display->panel->oplus_priv.vendor_name, "NT37701")) {
-				panel_serial_info.year += 1;
+				if (strcmp(display->panel->name, "20085 boe nt37701 amoled fhd+ panel")) {
+					panel_serial_info.year += 1;
+				}
 			}
 			panel_serial_info.month		= read[panel_serial_info.reg_index]	& 0x0F;
 			panel_serial_info.day		= read[panel_serial_info.reg_index + 1]	& 0x1F;
@@ -1177,6 +1185,41 @@ int oplus_display_set_panel_round_corner(void *data)
 	return 0;
 }
 
+/*  drm_debug message:
+   "Bit 0 (0x01)  will enable CORE messages (drm core code)\n"
+   "Bit 1 (0x02)  will enable DRIVER messages (drm controller code)\n"
+   "Bit 2 (0x04)  will enable KMS messages (modesetting code)\n"
+   "Bit 3 (0x08)  will enable PRIME messages (prime code)\n"
+   "Bit 4 (0x10)  will enable ATOMIC messages (atomic code)\n"
+   "Bit 5 (0x20)  will enable VBL messages (vblank code)\n"
+   "Bit 7 (0x80)  will enable LEASE messages (leasing code)\n"
+   "Bit 8 (0x100) will enable DP messages (displayport code)"); */
+extern unsigned int drm_debug;
+extern int oplus_dsi_log_type;
+
+int oplus_display_set_qcom_loglevel(void *data)
+{
+	struct kernel_loglevel *k_loginfo = data;
+	if (k_loginfo == NULL) {
+		printk(KERN_ERR "%s null args points\n", __func__);
+		return -1;
+	}
+
+	if (k_loginfo->enable) {
+		if (k_loginfo->log_level < 0x1F) {
+			oplus_dsi_log_type |= OPLUS_DEBUG_LOG_BACKLIGHT;
+		} else {
+			drm_debug = 0x1F;
+		}
+	} else {
+		drm_debug = 0x0;
+		oplus_dsi_log_type &= ~OPLUS_DEBUG_LOG_BACKLIGHT;
+	}
+
+	printk("%s drm_debug level = 0x%2x\n", __func__, drm_debug);
+	return 0;
+}
+
 int oplus_display_get_cabc_status(void *buf)
 {
 	uint32_t *cabc_status = buf;
@@ -1373,3 +1416,11 @@ int oplus_display_set_dre_status(void *buf)
 	return rc;
 }
 
+int oplus_display_set_shutdown_flag(void *buf)
+{
+	shutdown_flag = 1;
+	pr_err("debug for %s, buf = [%s], shutdown_flag = %d\n",
+			__func__, buf, shutdown_flag);
+
+	return 0;
+}

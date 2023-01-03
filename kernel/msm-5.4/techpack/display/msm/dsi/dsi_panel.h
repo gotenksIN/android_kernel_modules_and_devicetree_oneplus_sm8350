@@ -237,6 +237,18 @@ struct dsi_panel_oplus_privite {
 	u32 dc_apollo_sync_brightness_level;
 	u32 dc_apollo_sync_brightness_level_pcc;
 	u32 dc_apollo_sync_brightness_level_pcc_min;
+/********************************************
+	fp_type usage:
+	bit(0):lcd capacitive fingerprint(aod/fod are not supported)
+	bit(1):oled capacitive fingerprint(only support aod)
+	bit(2):optical fingerprint old solution(dim layer and pressed icon are controlled by kernel)
+	bit(3):optical fingerprint new solution(dim layer and pressed icon are not controlled by kernel)
+	bit(4):local hbm
+	bit(5):pressed icon brightness adaptive
+	bit(6):ultrasonic fingerprint
+	bit(7):ultra low power aod
+********************************************/
+	u32 fp_type;
 };
 #endif /* OPLUS_BUG_STABILITY */
 

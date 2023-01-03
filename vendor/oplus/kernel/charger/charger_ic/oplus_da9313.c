@@ -27,7 +27,12 @@
 //#include <mtk_boot_common.h>
 #include <mt-plat/mtk_rtc.h>
 //#include <mt-plat/charging.h>
+#include <linux/version.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
 #include <mt-plat/charger_type.h>
+#else
+#include <mt-plat/v1/charger_type.h>
+#endif
 #include <soc/oplus/device_info.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
@@ -705,12 +710,14 @@ static const struct proc_ops proc_work_mode_ops =
     .proc_read = proc_work_mode_read,
     .proc_write  = proc_work_mode_write,
     .proc_open  = simple_open,
+    .proc_lseek = seq_lseek,
 };
 static const struct proc_ops proc_set_reg_ops =
 {
     .proc_read = proc_set_reg_read,
     .proc_write = proc_set_reg_write,
     .proc_open  = simple_open,
+    .proc_lseek = seq_lseek,
 };
 #endif
 

@@ -919,7 +919,7 @@
 	oplus,mdss-dsi-osc-clk-mode0-rate = <180300>;
 	oplus,mdss-dsi-osc-clk-mode1-rate = <182300>;
 	qcom,mdss-dsi-dc-backlight-level = <1100>;
-	oplus,apollo-sync-brightness-level = <540>;
+	oplus,apollo-sync-brightness-level = <711>;
 	oplus,dsi-fod-brightness = <0 0xff>,
 			<2 0xf2>,
 			<4 0xf1>,

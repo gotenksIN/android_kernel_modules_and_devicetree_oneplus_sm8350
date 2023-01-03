@@ -18,6 +18,9 @@ struct proc_dir_entry *face_common_dir = NULL;
 struct proc_dir_entry *proc_file_entry = NULL;
 struct proc_dir_entry *proc_file_entry_tele = NULL;
 //bool is_wirte=false;
+struct proc_dir_entry *proc_file_entry_FW = NULL;
+int is_fw_dw = OIS_FW_DOWNLOAD_INTIAL;
+
 
 #define OIS_REGISTER_SIZE 100
 #define OIS_READ_REGISTER_DELAY 10
@@ -261,6 +264,25 @@ static ssize_t ois_write_tele(struct file *p_file,
 	return count;
 }
 
+static ssize_t ois_read_fwstate(struct file *p_file,
+   char __user  *buf, size_t count, loff_t *p_offset)
+{
+
+	if(count > sizeof(is_fw_dw))
+	{
+		return 0;
+	}
+	if (copy_to_user(buf, &is_fw_dw,sizeof(is_fw_dw)))
+	{
+		CAM_ERR(CAM_OIS, "copy_to_user failed");
+	}
+	return count ;
+}
+
+void  ois_write_fwstate(int state )
+{
+	is_fw_dw = state ;
+}
 
 
 static const struct file_operations proc_file_fops = {
@@ -272,6 +294,11 @@ static const struct file_operations proc_file_fops_tele = {
 	.owner = THIS_MODULE,
 	.read  = ois_read_tele,
 	.write = ois_write_tele,
+};
+
+static const struct file_operations proc_file_fops_FW = {
+   .owner = THIS_MODULE,
+   .read = ois_read_fwstate,
 };
 
 int ois_start_read(void *arg, bool start)
@@ -844,6 +871,7 @@ static int Download124Or128FW(struct cam_ois_ctrl_t *o_ctrl)
 	         o_ctrl->ois_type, o_ctrl->ois_gyro_vendor, o_ctrl->ois_gyro_position, o_ctrl->ois_module_vendor, o_ctrl->ois_actuator_vendor, o_ctrl->ois_fw_flag);
 
 	if (strstr(o_ctrl->ois_name, "124")) {
+		is_fw_dw = OIS_FW_DOWNLOAD_START;
 		rc = SelectDownload(o_ctrl->ois_gyro_vendor, o_ctrl->ois_actuator_vendor, o_ctrl->ois_type, o_ctrl->ois_fw_flag);
 
 		if (0 == rc) {
@@ -874,6 +902,7 @@ static int Download124Or128FW(struct cam_ois_ctrl_t *o_ctrl)
 				RamWrite32A(0xf111, 0x00000001 );
 				//msleep(5);
 			}
+		is_fw_dw = OIS_FW_DOWNLOAD_COMPLETED;
 		} else {
 			switch (rc) {
 			case 0x01:
@@ -1943,6 +1972,15 @@ void InitOISResource(struct cam_ois_ctrl_t *o_ctrl)
                 CAM_INFO(CAM_OIS, "Create successs");
                 }
         }
+
+		if(proc_file_entry_FW == NULL ){
+			proc_file_entry_FW = proc_create("OIS_FW_DOWNLOAD_STATE",0777,face_common_dir,&proc_file_fops_FW);
+			if(proc_file_entry_FW == NULL) {
+				CAM_ERR(CAM_OIS, "Create fail");
+			}else {
+				CAM_INFO(CAM_OIS, "Create successs");
+			}
+		}
 }
 
 int32_t oplus_cam_ois_construct_default_power_setting(

@@ -134,7 +134,7 @@ int32_t camera_io_dev_write(struct camera_io_master *io_master_info,
 		return -EINVAL;
 	}
 
-	snprintf(trace, sizeof(trace), "KMD %d_%d_0x%x Write", io_master_info->cci_client->cci_device, io_master_info->cci_client->cci_i2c_master, io_master_info->cci_client->sid*2);
+	snprintf(trace, sizeof(trace), "KMD %u_%u_0x%x Write", io_master_info->cci_client->cci_device, io_master_info->cci_client->cci_i2c_master, io_master_info->cci_client->sid*2);
 	trace_int(trace, write_setting->size);
 
 	if (io_master_info->master_type == CCI_MASTER) {
@@ -179,7 +179,7 @@ int32_t camera_io_dev_write_continuous(struct camera_io_master *io_master_info,
 		return -EINVAL;
 	}
 
-	snprintf(trace, sizeof(trace), "KMD %d_%d_0x%x Continuous Write", io_master_info->cci_client->cci_device, io_master_info->cci_client->cci_i2c_master, io_master_info->cci_client->sid*2);
+	snprintf(trace, sizeof(trace), "KMD %u_%u_0x%x Continuous Write", io_master_info->cci_client->cci_device, io_master_info->cci_client->cci_i2c_master, io_master_info->cci_client->sid*2);
 	trace_int(trace, write_setting->size);
 
 	if (io_master_info->master_type == CCI_MASTER) {

@@ -1827,6 +1827,7 @@
 		platform_support_project = <21617 0x216B2 0x216B3 21147>;
 		platform_support_project_dir = <21617 21617 21617 21147>;
 		platform_support_project_commandline = "default_commandline","default_commandline","default_commandline","default_commandline";
+		panel = <&dsi_oplus21617samsung_ams662zs01_1080_2400_cmd_dvt>;
 		/* SW Support Feature Control */
 		project_id = <21617>;
 		irq_need_dev_resume_ok;
@@ -1850,6 +1851,7 @@
 		high_resolution_support_x8;
 		touchpanel,button-type = <4>;
 		touchpanel.button-TRx = <0 0>;
+		disable_suspend_irq_handler_support;
 	};
 
 	mtp_19065:s6sy791_19065@48 {

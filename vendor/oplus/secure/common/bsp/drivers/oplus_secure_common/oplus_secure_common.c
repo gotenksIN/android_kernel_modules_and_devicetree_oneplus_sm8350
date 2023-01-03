@@ -48,6 +48,9 @@
 #include <linux/version.h>
 #include "../include/oplus_secure_common.h"
 #include <linux/init.h>
+#ifdef QCOM_QSEELOG_ENCRYPT
+#include <linux/qcom_scm.h>
+#endif //QCOM_QSEELOG_ENCRYPT
 
 #define OEM_FUSE_OFF        "0"
 #define OEM_FUSE_ON         "1"
@@ -214,7 +217,7 @@ static ssize_t secureType_read_proc(struct file *file, char __user *buf,
         int len = 0;
         secure_type_t secureType = get_secureType();
 
-        len = sprintf(page, "%d", secureType);
+        len = sprintf(page, "%d", (int)secureType);
 
         if (len > *off) {
                 len -= *off;
@@ -286,7 +289,7 @@ static ssize_t secureSNBound_read_proc(struct file *file, char __user *buf,
         }
     }
 
-    len = sprintf(page, "%d", secureSNBound_state);
+    len = sprintf(page, "%d", (int)secureSNBound_state);
     if (len > *off) {
         len -= *off;
     }
@@ -317,7 +320,7 @@ static ssize_t CryptoKeyUnsupport_read_proc(struct file *file, char __user *buf,
     char page[8] = {0};
     int len = 0;
 
-    len = sprintf(page, "%d", oem_cryptokey_unsupport);
+    len = sprintf(page, "%u", oem_cryptokey_unsupport);
     if (len > *off) {
         len -= *off;
     } else {
@@ -340,6 +343,48 @@ static struct file_operations CryptoKeyUnsupport_proc_fops = {
         .read = CryptoKeyUnsupport_read_proc,
 };
 #endif
+
+#ifdef QCOM_QSEELOG_ENCRYPT
+static ssize_t oemLogEncrypt_read_proc(struct file *file, char __user *buf,
+                size_t count, loff_t *off)
+{
+        char page[256] = {0};
+        int len = 0;
+        uint64_t enabled;
+        int ret = 0;
+        int oemLogEncrypt = 0;
+
+        ret = qcom_scm_query_encrypted_log_feature(&enabled);
+        if (ret) {
+            oemLogEncrypt = 0;
+        } else {
+            oemLogEncrypt = enabled;
+        }
+        len = sprintf(page, "%d", oemLogEncrypt);
+
+        if (len > *off) {
+                len -= *off;
+        }
+        else {
+                len = 0;
+        }
+        if (copy_to_user(buf, page, (len < count ? len : count))) {
+                return -EFAULT;
+        }
+        *off += len < count ? len : count;
+        return (len < count ? len : count);
+}
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+static const struct proc_ops oemLogEncrypt_proc_fops = {
+        .proc_read = oemLogEncrypt_read_proc,
+};
+#else
+static struct file_operations oemLogEncrypt_proc_fops = {
+        .read = oemLogEncrypt_read_proc,
+};
+#endif
+#endif //QCOM_QSEELOG_ENCRYPT
 
 static int secure_register_proc_fs(struct secure_data *secure_data)
 {
@@ -371,6 +416,15 @@ static int secure_register_proc_fs(struct secure_data *secure_data)
                 dev_err(secure_data->dev, "create CryptoKeyUnsupport proc failed.\n");
                 return SECURE_ERROR_GENERAL;
         }
+
+#ifdef QCOM_QSEELOG_ENCRYPT
+        /*  make the proc /proc/oplus_secure_common/oemLogEncrpt  */
+        pentry = proc_create("oemLogEncrypt", 0444, oplus_secure_common_dir, &oemLogEncrypt_proc_fops);
+        if (!pentry) {
+                dev_err(secure_data->dev, "create oemLogEncrypt proc failed.\n");
+                return SECURE_ERROR_GENERAL;
+        }
+#endif //QCOM_QSEELOG_ENCRYPT
 
         return SECURE_OK;
 }

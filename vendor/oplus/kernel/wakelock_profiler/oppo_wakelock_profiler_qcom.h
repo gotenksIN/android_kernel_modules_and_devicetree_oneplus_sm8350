@@ -60,7 +60,7 @@
 /* not wakeup source irq name, just used for statics*/
 #define IRQ_PROP_DUMMY_STATICS (1<<2)
 
-#if defined(CONFIG_OPPO_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
+#if defined(CONFIG_OPLUS_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
 
 int wakeup_reasons_statics(const char *irq_name, int choose_flag);
 void wakeup_reasons_clear(int choose_flag);

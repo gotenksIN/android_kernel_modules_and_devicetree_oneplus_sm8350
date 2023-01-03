@@ -77,6 +77,7 @@
 #define LITO 2
 #define TRINKET 3
 #define LAHAINA 4
+#define HOLI 5
 #define BENGAL 6
 #define LAGOON 7
 #define BLAIR 8
@@ -89,6 +90,7 @@
 #define PLATFORM_LAGOON "lagoon"
 #define PLATFORM_BLAIR "blair"
 #define PLATFORM_BENGAL "bengal"
+#define PLATFORM_HOLI "holi"
 
 struct ws_desc_t {
 	int prop;
@@ -105,7 +107,7 @@ struct wakeup_count_desc_t {
 	struct ws_desc_t ws_desc[7]; /*shouldn't less than 7*/
 };
 
-#if defined(CONFIG_OPPO_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
+#if defined(CONFIG_OPLUS_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
 
 int wakeup_reasons_statics(const char *irq_name, int choose_flag);
 void wakeup_reasons_clear(int choose_flag);

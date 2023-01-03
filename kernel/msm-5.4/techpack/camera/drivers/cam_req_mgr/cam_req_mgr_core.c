@@ -1069,10 +1069,10 @@ static int __cam_req_mgr_send_rdi_req(struct cam_req_mgr_core_link *link,
 	int 								 rc = 0, pd, i, idx;
 	//bool								 req_applied_to_min_pd = false;
 	struct cam_req_mgr_connected_device *dev = NULL;
-	struct cam_req_mgr_apply_request	 apply_req;
+	struct cam_req_mgr_apply_request     apply_req;
 	//struct cam_req_mgr_link_evt_data	   evt_data;
-	struct cam_req_mgr_tbl_slot 		 *slot = NULL;
-	struct cam_req_mgr_apply			 *apply_data = NULL;
+	struct cam_req_mgr_tbl_slot         *slot = NULL;
+	struct cam_req_mgr_apply            *apply_data = NULL;
 
 	apply_req.link_hdl = link->link_hdl;
 	apply_req.report_if_bubble = 0;
@@ -1285,7 +1285,7 @@ static int __cam_req_mgr_send_rdi_req(struct cam_req_mgr_core_link *link,
 		}
 	}
 
-	if(slot->ops.rdi_sof_applied == slot->ops.use_rdi_sof_apply)
+	if((NULL != slot) && (slot->ops.rdi_sof_applied == slot->ops.use_rdi_sof_apply))
 	{
 		slot->ops.rdi_sof_applied = 0;
 		slot->ops.use_rdi_sof_apply = 0;
@@ -3833,7 +3833,11 @@ static int cam_req_mgr_cb_notify_trigger(
 		link->watchdog->pause_timer = false;
 
 	if (link->dual_trigger) {
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 		if ((trigger_id >= 0) && (trigger_id <
+#else
+		if ((trigger != CAM_TRIGGER_POINT_RDI_SOF) && (trigger_id >= 0) && (trigger_id <
+#endif
 			CAM_REQ_MGR_MAX_TRIGGERS)) {
 			link->trigger_cnt[trigger_id][trigger]++;
 			rc = __cam_req_mgr_check_for_dual_trigger(link, trigger);

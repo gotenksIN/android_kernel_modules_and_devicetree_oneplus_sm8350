@@ -428,7 +428,7 @@ static const struct snd_kcontrol_new tfadsp_volume_controls[] = {
 static inline char *tfa_cont_profile_name(struct tfa98xx *tfa98xx, int prof_idx)
 {
 	if (tfa98xx->tfa->cnt == NULL)
-		return NULL;
+		return "NONE";
 	return tfaContProfileName_v6(tfa98xx->tfa->cnt, tfa98xx->tfa->dev_idx, prof_idx);
 }
 
@@ -1372,7 +1372,7 @@ static ssize_t tfa98xx_dbgfs_range_read(struct file *file,
 		goto range_err;
 	}
 
-	ret = snprintf(str, PAGE_SIZE, " Min:%d mOhms, Max:%d mOhms\n",
+	ret = snprintf(str, PAGE_SIZE, " Min:%u mOhms, Max:%u mOhms\n",
 		tfa98xx->tfa->min_mohms, tfa98xx->tfa->max_mohms);
 	pr_warning("%s addr 0x%x, str=%s\n", __func__, tfa98xx->i2c->addr, str);
 
@@ -2999,8 +2999,8 @@ static int tfa98xx_append_i2c_address(struct device *dev,
 {
 	char buf[50];
 	int i;
-	int i2cbus = i2c->adapter->nr;
-	int addr = i2c->addr;
+	unsigned int i2cbus = (unsigned int)(i2c->adapter->nr);
+	unsigned int addr = i2c->addr;
 	if (dai_drv && num_dai > 0)
 		for(i = 0; i < num_dai; i++) {
 			snprintf(buf, 50, "%s-%x-%x",dai_drv[i].name, i2cbus,
@@ -4981,7 +4981,7 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 		tfa98xx->tfa->max_mohms = SMART_PA_RANGE_DEFAULT_MAX;
 	}
 
-	dev_err(&i2c->dev, "min_mohms=%d, max_mohms=%d\n",
+	dev_err(&i2c->dev, "min_mohms=%u, max_mohms=%u\n",
 			tfa98xx->tfa->min_mohms, tfa98xx->tfa->max_mohms);
 
 	/* 0-left/top, 1-right/bottom, 0xff-default, not initialized */

@@ -3,8 +3,8 @@
  * Copyright (C) 2018-2020 Oplus. All rights reserved.
  */
 
-#ifndef __OPPO_WAKELOCK_PROFILER_H__
-#define __OPPO_WAKELOCK_PROFILER_H__
+#ifndef __OPLUS_WAKELOCK_PROFILER_H__
+#define __OPLUS_WAKELOCK_PROFILER_H__
 
 
 #include <linux/kobject.h>
@@ -34,7 +34,7 @@
 
 #define WS_CNT_ALL WS_CNT_MASK
 
-#ifdef CONFIG_OPPO_POWER_MTK
+#ifdef CONFIG_OPLUS_POWER_MTK
 
 #define IRQ_NAME_WLAN_IPCC_DATA "wlan"
 #define IRQ_NAME_WLAN_CONN2AP_DATA " R12_CONN2AP_SPM_WAKEUP_B"
@@ -109,7 +109,7 @@
 /* not wakeup source irq name, just used for statics*/
 #define IRQ_PROP_DUMMY_STATICS (1<<2)
 
-#ifdef CONFIG_OPPO_WAKELOCK_PROFILER
+#ifdef CONFIG_OPLUS_WAKELOCK_PROFILER
 
 int wakeup_reasons_statics(const char *irq_name, int choose_flag);
 void wakeup_reasons_clear(int choose_flag);
@@ -141,4 +141,4 @@ static inline void wakeup_get_end_hold_time(void) {}
 
 #endif
 
-#endif // __OPPO_WAKELOCK_PROFILER_H__
+#endif // __OPLUS_WAKELOCK_PROFILER_H__

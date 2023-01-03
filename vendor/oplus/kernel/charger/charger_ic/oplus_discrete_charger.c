@@ -41,6 +41,7 @@
 #include "../oplus_pps.h"
 #include "../oplus_configfs.h"
 #include "../oplus_chg_ops_manager.h"
+#include "../oplus_chg_module.h"
 #include "../voocphy/oplus_voocphy.h"
 #include <soc/oplus/system/boot_mode.h>
 #include "oplus_sy6974b.h"
@@ -1542,6 +1543,7 @@ static int oplus_pdc_setup(int *vbus_mv, int *ibus_ma)
 	return 0;
 }
 
+#define PDO_9V_VBUS_MV      9000
 #define PDO_VBUS_DEFAULT_MV 5000
 #define PDO_IBUS_DEFAULT_MA 2000
 static void oplus_pdo_select(int vbus_mv, int ibus_ma)
@@ -1605,7 +1607,7 @@ static void oplus_pdo_select(int vbus_mv, int ibus_ma)
 						ibus = ibus_ma;
 					break;
 				}
-				chg_err("%d mv:[%d,%d] %d type:%d %d\n",
+				chg_err("%d mv:[%d,%d] %d type:%d\n",
 					i, pd_cap.min_mv[i],
 					pd_cap.max_mv[i], pd_cap.ma[i],
 					pd_cap.type[i]);
@@ -1614,6 +1616,16 @@ static void oplus_pdo_select(int vbus_mv, int ibus_ma)
 	} else {
 		vbus = PDO_VBUS_DEFAULT_MV;
 		ibus = PDO_IBUS_DEFAULT_MA;
+	}
+
+	if (vbus_mv == PDO_9V_VBUS_MV &&
+	    vbus >= g_oplus_chip->limits.charger_hv_thr) {
+		chg_err("adapter not support 9v pdo,vbus=%d >= %d\n",
+		        vbus, g_oplus_chip->limits.charger_hv_thr);
+		g_oplus_chip->pd_adapter_support_9v = false;
+		vbus = PDO_VBUS_DEFAULT_MV;
+	} else {
+		g_oplus_chip->pd_adapter_support_9v = true;
 	}
 	oplus_pdc_setup(&vbus, &ibus);
 }
@@ -2604,8 +2616,7 @@ static void __exit discrete_charger_exit(void)
 	bq27541_driver_exit();
 	adapter_ic_exit();
 }
-module_init(discrete_charger_init);
-module_exit(discrete_charger_exit);
+oplus_chg_module_register(discrete_charger);
 #endif
 
 MODULE_DESCRIPTION("Discrete Charger Driver");

@@ -3,6 +3,11 @@
 ** File : oplus_bl.c
 ** Description : oplus display backlight
 ** Version : 1.0
+** Date : 2021/02/22
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**  kevin.liuwq    2020/02/22        1.0           Build this moudle
 ******************************************************************/
 
 #include "oplus_bl.h"

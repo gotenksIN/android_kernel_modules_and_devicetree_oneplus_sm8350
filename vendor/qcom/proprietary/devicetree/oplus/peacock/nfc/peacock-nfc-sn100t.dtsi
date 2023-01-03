@@ -17,6 +17,7 @@
 		compatible = "oplus-nfc-chipset";
 		chipset-20031 = "SN100T";
 		chipset-20311 = "SN100T";
+                chipset-20085 = "SN100T";
 	};
 };
 

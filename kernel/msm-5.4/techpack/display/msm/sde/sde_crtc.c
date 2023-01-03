@@ -2683,6 +2683,10 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 					if (OPLUS_DISPLAY_AOD_SCENE == get_oplus_display_scene()) {
 						target_vblank += 3;
 					}
+				} else if (!strcmp(display->panel->name, "21031 samsung AMS643YE05 dsc cmd mode panel")) {
+					if (OPLUS_DISPLAY_AOD_SCENE == get_oplus_display_scene()) {
+						target_vblank += 2;
+					}
 				}
 				#if IS_ENABLED(CONFIG_QGKI)
 				current_vblank = drm_crtc_vblank_count_and_time(crtc, &vblanktime);

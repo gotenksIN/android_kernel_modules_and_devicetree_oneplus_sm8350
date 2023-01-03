@@ -23,6 +23,8 @@ DEFINE_RAW_SPINLOCK(fbg_lock);
 int min_clusters = 2;
 char lc[] = "ndroid.launcher";
 char ksn[] = "kuaishou.nebula";
+char dy[] = "droid.ugc.aweme";
+char douyu[] = "v.douyu.android";
 extern bool isHighFps;
 extern bool use_vload;
 extern capacity_spare_without(int cpu, struct task_struct *p);
@@ -901,7 +903,8 @@ void update_frame_thread(int pid, int tid)
 	ui = do_update_thread(pid, ui);
 	render = do_update_thread(tid, render);
 	if (ui) {
-		if (strstr(ui->comm, lc) || strstr(ui->comm, ksn)) {
+		if (strstr(ui->comm, lc) || strstr(ui->comm, ksn)
+			|| strstr(ui->comm, dy) || strstr(ui->comm, douyu)) {
 			stune_boost = 30;
 			need_spb = 1;
 		} else {

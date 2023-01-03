@@ -3,6 +3,11 @@
 ** File: oplus_lcm_brightness_notify.c
 ** Description: oplus lcm brightness notify
 ** Version : 1.0
+** Date : 2021/09/26
+**
+** ----------------------- Revision History: -----------------------
+**  <author>        <data>        <version >        <desc>
+**  Six.Xu          2021/09/26    1.0               Display notifier
 *******************************************************************/
 #include <linux/msm_drm_notify.h>
 

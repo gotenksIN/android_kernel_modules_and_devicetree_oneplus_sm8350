@@ -110,6 +110,9 @@
 #define AW8697_081538_HAPTIC_CONT_NUM_BRK          3
 #endif
 
+#define DEV_ID_0619		619
+#define DEV_ID_0832		832
+#define DEV_ID_1040             1040
 #define AW8697_HAPTIC_F0_COEFF              260     //2.604167
 
 
@@ -587,11 +590,11 @@ struct aw8697_que_seq {
 #define NEW_RING_END            160
 #define OS12_NEW_RING_START     70
 #define OS12_NEW_RING_END       89
-#define REALME_RING_START       161
-#define REALME_RING_END         167
+#define OPLUS_RING_START       161
+#define OPLUS_RING_END         167
 
 #define OPLUS_START_INDEX       201
-#define OPLUS_END_INDEX         320
+#define OPLUS_END_INDEX         326
 #define OPLUS_RING_START_INDEX  152
 #define OPLUS_RING_END_INDEX    231
 

@@ -3,6 +3,11 @@
 ** File : oplus_display_private_api.h
 ** Description : oplus display private api implement
 ** Version : 1.0
+** Date : 2018/03/20
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**   Hu.Jie          2018/03/20        1.0           Build this moudle
 ******************************************************************/
 #include "oplus_display_private_api.h"
 #include "oplus_onscreenfingerprint.h"
@@ -124,6 +129,12 @@ int oplus_set_display_vendor(struct dsi_display *display)
 			!display->panel->oplus_priv.manufacture_name) {
 		pr_err("failed to config lcd proc device");
 		return -EINVAL;
+	}
+
+	if (!strcmp(display->display_type, "secondary")) {
+		register_device_proc("lcd_s", (char *)display->panel->oplus_priv.vendor_name,
+		     (char *)display->panel->oplus_priv.manufacture_name);
+		return 0;
 	}
 
 	register_device_proc("lcd", (char *)display->panel->oplus_priv.vendor_name,
@@ -879,7 +890,9 @@ static ssize_t oplus_display_get_panel_serial_number(struct kobject *obj,
 
 		panel_serial_info.year		= (read[panel_serial_info.reg_index] & 0xF0) >> 0x4;
 		if (!strcmp(display->panel->oplus_priv.vendor_name, "NT37701")) {
-			panel_serial_info.year += 1;
+			if (strcmp(display->panel->name, "20085 boe nt37701 amoled fhd+ panel")) {
+				panel_serial_info.year += 1;
+			}
 		}
 		panel_serial_info.month		= read[panel_serial_info.reg_index]	& 0x0F;
 		panel_serial_info.day		= read[panel_serial_info.reg_index + 1]	& 0x1F;
@@ -2756,6 +2769,9 @@ int dsi_display_oplus_set_power(struct drm_connector *connector,
 					} else {
 						rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_HBM_OFF);
 					}
+					mutex_unlock(&display->panel->panel_lock);
+					/* Update aod light mode and fix 3658965*/
+					mutex_lock(&display->panel->panel_lock);
 					oplus_update_aod_light_mode_unlock(display->panel);
 
 				} else {
@@ -2989,7 +3005,7 @@ static ssize_t oplus_display_set_panel_pwr(struct kobject *obj,
 	pr_err("debug for %s, buf = [%s], id = %d value = %d, count = %d\n",
 	       __func__, buf, panel_vol_id, panel_vol_value, count);
 
-	if (panel_vol_id < 0 || panel_vol_id > PANEL_VOLTAGE_ID_MAX) {
+	if (panel_vol_id < 0 || panel_vol_id >= PANEL_VOLTAGE_ID_MAX) {
 		return -EINVAL;
 	}
 
@@ -3160,6 +3176,9 @@ static OPLUS_ATTR(vsync_switch, S_IRUGO|S_IWUSR, oplus_get_vsync_switch, oplus_s
 static OPLUS_ATTR(backlight_smooth, S_IRUGO|S_IWUSR, oplus_backlight_smooth_get_debug,
 			oplus_backlight_smooth_set_debug);
 
+/* fp type config */
+static OPLUS_ATTR(fp_type, S_IRUGO|S_IWUSR, oplus_ofp_get_fp_type_attr, oplus_ofp_set_fp_type_attr);
+
 /*
  * Create a group of attributes so that we can create and destroy them all
  * at once.
@@ -3208,6 +3227,8 @@ static struct attribute *oplus_display_attrs[] = {
 	&oplus_attr_shutdownflag.attr,
 #endif /*OPLUS_FEATURE_TP_BASIC*/
 	&oplus_attr_dither.attr,
+	/* fp type config */
+	&oplus_attr_fp_type.attr,
 	NULL,	/* need to NULL terminate the list of attributes */
 };
 

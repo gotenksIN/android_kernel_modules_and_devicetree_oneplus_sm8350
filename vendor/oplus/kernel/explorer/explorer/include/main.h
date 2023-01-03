@@ -91,9 +91,6 @@ struct explorer_boot_status {
 	bool is_cc_sec_boot;
 	atomic_t flashable;
 	unsigned long start_jiffies; /*start Jiffies of this boot*/
-#ifdef SLT_ENABLE
-	bool slt_has_booted;
-#endif
 };
 
 #ifndef OPLUS_EXPLORER_PLATFORM_QCOM

@@ -778,8 +778,9 @@ int explorer_aon_drv_cmd(void **pp_param, void *arg)
 	if (rc) {
 		pr_err("%s, copy_from_user failed, ret = 0x%x.\n", __func__, rc);
 		kfree(buf_data);
+		buf_data = NULL;
 		pr_info("%s buf_data mm-kfree", __func__);
-		goto release_mutex;
+		return rc;
 	}
 
 	switch (aon_data->aon_cmd_opcode) {
@@ -1251,6 +1252,7 @@ release_mutex:
 free_bufdata:
 	kfree(buf_data);
 	pr_info("%s buf_data mm-kfree", __func__);
+	buf_data = NULL;
 	return rc;
 
 free_power_settings:

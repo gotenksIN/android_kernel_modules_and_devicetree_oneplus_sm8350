@@ -3,6 +3,11 @@
 ** File : oplus_adfr.h
 ** Description : ADFR kernel module
 ** Version : 1.0
+** Date : 2020/10/23
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**  CaiHuiyue      2020/10/23        1.0           Build this moudle
 ******************************************************************/
 #include "sde_trace.h"
 #include "msm_drv.h"

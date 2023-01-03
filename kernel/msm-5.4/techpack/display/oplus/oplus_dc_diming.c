@@ -3,6 +3,11 @@
 ** File : oplus_dc_diming.c
 ** Description : oplus dc_diming feature
 ** Version : 1.0
+** Date : 2020/04/15
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**   Qianxu         2020/04/15        1.0           Build this moudle
 ******************************************************************/
 
 #include "oplus_display_private_api.h"
@@ -62,7 +67,8 @@ int dsi_panel_tx_cmd_hbm_pre_check(struct dsi_panel *panel, enum dsi_cmd_set_typ
 	DSI_DEBUG("%s cmd=%s", __func__, prop_map[type]);
 	if (!strcmp(panel->oplus_priv.vendor_name, "AMB655X") ||
 		!strcmp(panel->oplus_priv.vendor_name, "AMB670YF01") ||
-		!strcmp(panel->oplus_priv.vendor_name, "AMS662ZS01")) {
+		!strcmp(panel->oplus_priv.vendor_name, "AMS662ZS01") ||
+		!strcmp(panel->name, "21031 samsung AMS643YE05 dsc cmd mode panel")) {
 		switch(type) {
 		case DSI_CMD_AOD_HBM_ON_PVT:
 		case DSI_CMD_AOD_HBM_ON:
@@ -106,7 +112,8 @@ void dsi_panel_tx_cmd_hbm_post_check(struct dsi_panel *panel, enum dsi_cmd_set_t
 {
 	if (!strcmp(panel->oplus_priv.vendor_name, "AMB655X") ||
 		!strcmp(panel->oplus_priv.vendor_name, "AMB670YF01") ||
-		!strcmp(panel->oplus_priv.vendor_name, "AMS662ZS01")) {
+		!strcmp(panel->oplus_priv.vendor_name, "AMS662ZS01") ||
+		!strcmp(panel->name, "21031 samsung AMS643YE05 dsc cmd mode panel")) {
 		switch(type) {
 		case DSI_CMD_AOD_HBM_ON_PVT:
 		case DSI_CMD_AOD_HBM_ON:
@@ -547,14 +554,13 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 	if (OPLUS_DISPLAY_AOD_SCENE == get_oplus_display_scene()) {
 		if (sde_crtc_get_fingerprint_pressed(c_conn->encoder->crtc->state)) {
 			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, true);
-
 		} else {
 			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, false);
 			fingerprint_mode = false;
 		}
-
 	} else {
-		if (!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS662ZS01")) {
+		if (!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS662ZS01") ||
+			!strcmp(dsi_display->panel->name, "21031 samsung AMS643YE05 dsc cmd mode panel")) {
 			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, true);
 		} else {
 			sde_crtc_set_onscreenfinger_defer_sync(c_conn->encoder->crtc->state, false);
@@ -740,7 +746,8 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 			current_vblank = drm_crtc_vblank_count(crtc);
 
 			if (strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMB655X") && strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMB670YF01")
-				&& strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS662ZS01")) {
+				&& strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS662ZS01")
+				&& strcmp(dsi_display->panel->name, "boe nt37701 dsc cmd mode panel")) {
 				if ((!strcmp(dsi_display->panel->oplus_priv.vendor_name, "S6E3HC3")) ||
 					(!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMB670YF01"))) {
 					ret = wait_event_timeout(*drm_crtc_vblank_waitqueue(crtc),
@@ -750,15 +757,6 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 					ret = wait_event_timeout(*drm_crtc_vblank_waitqueue(crtc),
 							current_vblank != drm_crtc_vblank_count(crtc),
 							msecs_to_jiffies(17));
-				}
-			}
-
-			if (strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS662ZS01")) {
-				if ((strcmp(dsi_display->panel->oplus_priv.vendor_name, "S6E3HC3")) ||
-					(!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMB670YF01"))) {
-					oplus_skip_datadimming_sync = true;
-					oplus_panel_update_backlight_unlock(panel);
-					oplus_skip_datadimming_sync = false;
 				}
 			}
 
@@ -787,6 +785,9 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 						rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_OFF);
 						rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_HBM_AOR_RESTORE);
 					}
+					mutex_unlock(&dsi_display->panel->panel_lock);
+					/* Update aod light mode and fix 3658965*/
+					mutex_lock(&dsi_display->panel->panel_lock);
 					oplus_update_aod_light_mode_unlock(panel);
 					set_oplus_display_scene(OPLUS_DISPLAY_AOD_SCENE);
 				} else {
@@ -802,6 +803,7 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 						(!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMB655X")) ||
 						(!strcmp(panel->oplus_priv.vendor_name, "AMB670YF01") && (panel->panel_id2 >= 5))) {
 						rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_HBM_OFF);
+						oplus_panel_update_backlight_unlock(panel);
 					}
 					else if (!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS643YE01") ||
 							(!strcmp(dsi_display->panel->oplus_priv.vendor_name, "AMS662ZS01"))) {
@@ -815,6 +817,7 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 							dsi_panel_seed_mode(dsi_display->panel, seed_mode);
 							fingerprint_wait_vsync(c_conn->encoder, dsi_display->panel);
 							rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_HBM_OFF);
+							oplus_panel_update_backlight_unlock(panel);
 						}
 					}
 					else {
@@ -840,7 +843,6 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 							rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_ON);
 						}
 					}
-
 				}
 
 			} else if (oplus_display_get_hbm_mode()) {
@@ -852,6 +854,9 @@ int sde_connector_update_hbm(struct drm_connector *connector)
 				} else {
 					rc = dsi_panel_tx_cmd_set(dsi_display->panel, DSI_CMD_AOD_HBM_OFF);
 				}
+				mutex_unlock(&dsi_display->panel->panel_lock);
+				/* Update aod light mode and fix 3658965*/
+				mutex_lock(&dsi_display->panel->panel_lock);
 				oplus_update_aod_light_mode_unlock(panel);
 
 			} else {

@@ -46,6 +46,10 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 		return -EINVAL;
 	}
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+        total_size = 0;
+#endif
+
 	eb_info = (struct cam_eeprom_soc_private *)e_ctrl->soc_info.soc_private;
 
 	for (j = 0; j < block->num_map; j++) {

@@ -8,8 +8,13 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 #include <soc/oplus/system/oplus_project.h>
+#endif
 #include "charger_ic/oplus_switching.h"
+#if __and(IS_MODULE(CONFIG_OPLUS_CHG), IS_MODULE(CONFIG_OPLUS_CHG_V2))
+#include "oplus_chg_symbol.h"
+#endif
 
 static struct oplus_gauge_chip *g_gauge_chip = NULL;
 static struct oplus_gauge_chip *g_sub_gauge_chip = NULL;
@@ -39,6 +44,10 @@ MODULE_PARM_DESC(sub_gauge_dbg_vbat, "debug sub_battery voltage");
 static int sub_gauge_dbg_ibat = 0;
 module_param(sub_gauge_dbg_ibat, int, 0644);
 MODULE_PARM_DESC(sub_gauge_dbg_ibat, "debug sub_battery current");
+
+static int gauge_dbg_soc = 0;
+module_param(gauge_dbg_soc, int, 0644);
+MODULE_PARM_DESC(gauge_dbg_soc, "debug battery soc");
 
 int oplus_plat_gauge_is_support(void){
 	if (!g_plat_gauge_ops) {
@@ -238,6 +247,7 @@ int oplus_gauge_get_batt_temperature(void)
 			}
 		batt_temp = g_gauge_chip->gauge_ops->get_battery_temperature();
 
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 		if (get_eng_version() == HIGH_TEMP_AGING ||
 		    oplus_is_ptcrb_version()) {
 			printk(KERN_ERR "[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here, \
@@ -245,6 +255,7 @@ int oplus_gauge_get_batt_temperature(void)
 			if (batt_temp > 690)
 				batt_temp = 690;
 		}
+#endif
 		return batt_temp;
 	}
 }
@@ -259,14 +270,19 @@ int oplus_gauge_get_batt_soc(void)
 	if (!g_gauge_chip) {
 		return -1;
 	} else {
-		if (!g_sub_gauge_chip || !g_sub_gauge_chip->gauge_ops
+		if (gauge_dbg_soc != 0) {
+			chg_err("debug enabled, soc[%d]\n", gauge_dbg_soc);
+			return gauge_dbg_soc;
+		} else if (!g_sub_gauge_chip || !g_sub_gauge_chip->gauge_ops
 							|| !g_sub_gauge_chip->gauge_ops->get_battery_soc) {
 			return g_gauge_chip->gauge_ops->get_battery_soc();
 		} else {
 			batt_soc = g_gauge_chip->gauge_ops->get_battery_soc();
 			sub_batt_soc = oplus_gauge_get_sub_batt_soc();
-			soc_remainder = (batt_soc * 54 + sub_batt_soc * 46) % 100;
-			soc = (batt_soc * 54 + sub_batt_soc * 46) / 100;
+			soc_remainder = (batt_soc * g_gauge_chip->capacity_pct +
+				sub_batt_soc * g_sub_gauge_chip->capacity_pct) % 100;
+			soc = (batt_soc * g_gauge_chip->capacity_pct +
+				sub_batt_soc * g_sub_gauge_chip->capacity_pct) / 100;
 			if (soc_remainder != 0) {
 				soc = soc + 1;
 			}
@@ -462,6 +478,7 @@ void oplus_gauge_init(struct oplus_gauge_chip *chip)
 {
 	g_gauge_chip = chip;
 }
+EXPORT_SYMBOL(oplus_gauge_init);
 
 void oplus_plat_gauge_init(struct oplus_plat_gauge_operations *ops)
 {
@@ -529,6 +546,7 @@ int oplus_gauge_get_prev_batt_temperature(void)
 		}
 		batt_temp = g_gauge_chip->gauge_ops->get_prev_battery_temperature();
 
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 		if (get_eng_version() == HIGH_TEMP_AGING ||
 		    oplus_is_ptcrb_version()) {
 			printk(KERN_ERR "[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here, \
@@ -536,6 +554,7 @@ int oplus_gauge_get_prev_batt_temperature(void)
 			if (batt_temp > 690)
 				batt_temp = 690;
 		}
+#endif
 		return batt_temp;
 	}
 }
@@ -646,24 +665,27 @@ int oplus_gauge_get_prev_batt_fcc(void)
 int oplus_gauge_protect_check(void)
 {
 	if (!g_gauge_chip) {
-		return true;
+		return 0;
 	} else {
 		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->protect_check) {
 			return g_gauge_chip->gauge_ops->protect_check();
 		}
-		return true;
+		return 0;
 	}
 }
 
 bool oplus_gauge_afi_update_done(void)
 {
-	if (!g_gauge_chip) {
+	if (oplus_chg_get_voocphy_support() == ADSP_VOOCPHY) {
 		return true;
+	}
+	if (!g_gauge_chip) {
+		return false;
 	} else {
 		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->afi_update_done) {
 			return g_gauge_chip->gauge_ops->afi_update_done();
 		}
-		return true;
+		return false;
 	}
 }
 
@@ -746,6 +768,7 @@ int oplus_gauge_get_sub_batt_temperature(void)
 			}
 		batt_temp = g_sub_gauge_chip->gauge_ops->get_battery_temperature();
 
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 		if (get_eng_version() == HIGH_TEMP_AGING ||
 		    oplus_is_ptcrb_version()) {
 			printk(KERN_ERR "[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here, \
@@ -753,6 +776,7 @@ int oplus_gauge_get_sub_batt_temperature(void)
 			if (batt_temp > 690)
 				batt_temp = 690;
 		}
+#endif
 		return batt_temp;
 	}
 }
@@ -774,6 +798,30 @@ int oplus_gauge_get_bcc_parameters(char *buf)
 	else {
 		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->get_bcc_parameters) {
 			g_gauge_chip->gauge_ops->get_bcc_parameters(buf);
+		}
+		return 0;
+	}
+}
+
+int oplus_gauge_fastchg_update_bcc_parameters(char *buf)
+{
+	if (!g_gauge_chip)
+		return 0;
+	else {
+		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->get_update_bcc_parameters) {
+			g_gauge_chip->gauge_ops->get_update_bcc_parameters(buf);
+		}
+		return 0;
+	}
+}
+
+int oplus_gauge_get_prev_bcc_parameters(char *buf)
+{
+	if (!g_gauge_chip)
+		return 0;
+	else {
+		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->get_prev_bcc_parameters) {
+			g_gauge_chip->gauge_ops->get_prev_bcc_parameters(buf);
 		}
 		return 0;
 	}

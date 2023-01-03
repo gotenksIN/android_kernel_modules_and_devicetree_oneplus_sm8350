@@ -2185,6 +2185,36 @@ void sia81xx_compatible_chips_adapt(
  * end - sia81xx driver common
  ********************************************************************/
 
+#ifdef OPLUS_ARCH_EXTENDS
+static void sia81xx_reset_before_checkId(struct sia81xx_dev_s *sia81xx)
+{
+	unsigned long flags;
+
+	if(NULL == sia81xx) {
+		pr_info("[%s] %s: sia81xx is NULL! \r\n", LOG_FLAG, __func__);
+		return;
+	}
+
+	if (0 == sia81xx->disable_pin && gpio_is_valid(sia81xx->rst_pin)) {
+		pr_debug("[debug][%s] %s: reset the chip! \r\n", LOG_FLAG, __func__);
+
+		spin_lock_irqsave(&sia81xx->rst_lock, flags);
+		gpio_set_value(sia81xx->rst_pin, SIA81XX_ENABLE_LEVEL);
+		spin_unlock_irqrestore(&sia81xx->rst_lock, flags);
+		mdelay(2);
+
+		spin_lock_irqsave(&sia81xx->rst_lock, flags);
+		gpio_set_value(sia81xx->rst_pin, SIA81XX_DISABLE_LEVEL);
+		spin_unlock_irqrestore(&sia81xx->rst_lock, flags);
+		mdelay(3);
+
+		spin_lock_irqsave(&sia81xx->rst_lock, flags);
+		gpio_set_value(sia81xx->rst_pin, SIA81XX_ENABLE_LEVEL);
+		spin_unlock_irqrestore(&sia81xx->rst_lock, flags);
+	}
+	return;
+}
+#endif /* OPLUS_ARCH_EXTENDS */
 
 /********************************************************************
  * i2c bus driver
@@ -2262,8 +2292,11 @@ static int sia81xx_i2c_probe(
 
 	/* A temporary solution for customer, it should be ensure that,
 	 * the sia81xx_probe() is executed before sia81xx_i2c_probe() execute */
-	sia81xx_compatible_chips_adapt(sia81xx);
 
+#ifdef OPLUS_ARCH_EXTENDS
+	sia81xx_reset_before_checkId(sia81xx);
+#endif /* OPLUS_ARCH_EXTENDS */
+	sia81xx_compatible_chips_adapt(sia81xx);
 	/* probe other sub module */ /* update info if it's already probed */
 	if(1 == sia81xx->en_dyn_ud_vdd || 1 == sia81xx->en_dyn_ud_pvdd) {
 		sia81xx_auto_set_vdd_probe(

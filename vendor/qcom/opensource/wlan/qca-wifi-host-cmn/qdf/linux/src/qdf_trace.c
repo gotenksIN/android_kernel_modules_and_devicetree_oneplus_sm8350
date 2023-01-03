@@ -4041,11 +4041,11 @@ void __qdf_bug(void)
 //modify for: close bug in user build
 	BUG();
 #else /* OPLUS_BUG_STABILITY */
-	//if (AGING == get_eng_version()) {
-	//	BUG();
-	//} else {
+	if (AGING == get_eng_version()) {
+		BUG();
+	} else {
 		WARN_ON(1);
-	//}
+	}
 #endif /* OPLUS_BUG_STABILITY */
 }
 qdf_export_symbol(__qdf_bug);

@@ -25,10 +25,7 @@ explorer-y := explorer/main.o \
     explorer/power.o \
     explorer/ap_boot.o \
     explorer/exception.o \
-    explorer/rtt_debug.o \
-    slt/slt.o \
-    slt/case/sdio_test_case.o \
-    slt/slt_loader.o
+    explorer/rtt_debug.o
 
 ifneq ($(CONFIG_BOARD),RASPBERRYPI)
      explorer-y += aon/aon_sensor_core.o

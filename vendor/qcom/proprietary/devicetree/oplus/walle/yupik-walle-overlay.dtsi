@@ -152,7 +152,7 @@
 		io-channel-names= "vph_pwr_voltage_sub";
 
 		main-sub {
-			devinfo-match-ignore-list = <21075>; /*to jump over match*/
+			devinfo-match-ignore-list = <21075 22831>; /*to jump over match*/
 			compatible = "hw-match, main-sub";
 			use_pmic_adc;
 			adc_ranges = <0 80
@@ -167,10 +167,10 @@
 					951 1050
 					1051 1150
 					1151 1300>;
-			aboard-patterns = <0 0 0>;
+			aboard-patterns = <0 0 0 0>;
 
 			/*main board*/
-			match-projects = <21071 21072 21075>;
+			match-projects = <21071 21072 21075 22831>;
 
 			/*rf type*/
 			//rf_match_support;
@@ -217,10 +217,11 @@
                 touchpanel,button-type = <4>;
                 touchpanel.button-TRx = <0 0>;
                 tp_type = <9>;
-                platform_support_project = <21075 21072 21071>;
-                platform_support_project_dir = <21075 21075 21075>;
+                platform_support_project = <21075 21072 21071 22831>;
+                platform_support_project_dir = <21075 21075 21075 21075>;
                 firmware_name = "0xAA276DI";
-                platform_support_project_commandline = "mdss_dsi_oplus21075_ds_ili7807s_1080_2412_120fps_vid","mdss_dsi_oplus21612boe_ili7807s_1080_2400_120fps_vid","default_commandline";
+                platform_support_project_commandline = "mdss_dsi_oplus21075_ds_ili7807s_1080_2412_120fps_vid","mdss_dsi_oplus21612boe_ili7807s_1080_2400_120fps_vid","default_commandline","mdss_dsi_oplus21075_ds_ili7807s_1080_2412_120fps_vid";
+                panel = <&dsi_oplus21075_ds_ili7807s_1080_2412_120fps_vid>;
                 pinctrl-names = "default", "pin_set_low", "pin_set_high";
                 pinctrl-0 = <&ts_int_active>;
                 /*pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;*/

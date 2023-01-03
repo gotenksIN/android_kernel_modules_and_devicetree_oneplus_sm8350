@@ -3,6 +3,11 @@
 ** File : oplus_display_esd.c
 ** Description : oplus esd feature
 ** Version : 1.0
+** Date : 2021/01/14
+**
+** ------------------------------- Revision History: -----------
+**  <author>        <data>        <version >        <desc>
+**   XXXXX         2021/01/14        1.0           Build this moudle
 ******************************************************************/
 
 #include "oplus_display_private_api.h"
@@ -192,8 +197,7 @@ static int oplus_mdss_dsi_samsung_amb655x_dsc_panel_check_esd_status(struct dsi_
 			cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "ESD:");
 			cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "0x0A = %02x, 0xB6 = %02x, 0xA2 = %02x, %02x, %02x, %02x, %02x",
 				register1[0], register2[0], register3[0], register3[1], register3[2], register3[3], register3[4]);
-			DRM_ERROR("ESD check failed: %s\n", payload);
-			mm_fb_display_kevent(payload, MM_FB_KEY_RATELIMIT_1H, "ESD check failed");
+			DSI_MM_ERR("ESD check failed: %s\n", payload);
 		}
 #endif  /*OPLUS_BUG_STABILITY*/
 	} else {
@@ -246,8 +250,7 @@ static int oplus_mdss_dsi_boe_nt37701_dsc_panel_check_esd_status(struct dsi_disp
 			cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "ESD:");
 			cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "0x0A = %02x, 0xFA = %02x, 0xAB = %02x,",
 				register1[0], register2[0], register3[0]);
-			DRM_ERROR("ESD check failed: %s\n", payload);
-			mm_fb_display_kevent(payload, MM_FB_KEY_RATELIMIT_1H, "ESD check failed");
+			DSI_MM_ERR("ESD check failed: %s\n", payload);
 		}
 #endif  /*OPLUS_BUG_STABILITY*/
 	}
@@ -319,8 +322,7 @@ static int oplus_mdss_dsi_samsung_amb670yf01_dsc_panel_check_esd_status(struct d
 				cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "ESD:");
 				cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "0x0A = %02x, 0xA2 = %02x, %02x, %02x, %02x, %02x",
 					register1[0], register2[0], register2[1], register2[2], register2[3], register2[4]);
-				DRM_ERROR("ESD check failed: %s\n", payload);
-				mm_fb_display_kevent(payload, MM_FB_KEY_RATELIMIT_1H, "ESD check failed");
+				DSI_MM_ERR("ESD check failed: %s\n", payload);
 			}
 #endif  /*OPLUS_BUG_STABILITY*/
 		} else {
@@ -376,7 +378,6 @@ static int oplus_mdss_dsi_samsung_s6e3xa1_dsc_panel_check_esd_status(struct dsi_
 			cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "0xEE[0] = %02x, 0xEE[1] = %02x",
 				register1[0], register1[1]);
 			DSI_MM_ERR("ESD check failed: %s\n", payload);
-			mm_fb_display_kevent(payload, MM_FB_KEY_RATELIMIT_1H, "ESD check failed");
 		}
 #endif /* OPLUS_BUG_STABILITY */
 	} else {
@@ -420,7 +421,6 @@ static int oplus_mdss_dsi_samsung_ams643ye01_dsc_panel_check_esd_status(struct d
 			cnt += scnprintf(payload + cnt, sizeof(payload) - cnt, "0x0A = %02x, 0x0E = %02x, 0x05 = %02x",
 				register1[0], register2[0], register3[0]);
 			DSI_MM_ERR("ESD check failed: %s\n", payload);
-			mm_fb_display_kevent(payload, MM_FB_KEY_RATELIMIT_1H, "ESD check failed");
 		}
 #endif  /*OPLUS_BUG_STABILITY*/
 	} else {

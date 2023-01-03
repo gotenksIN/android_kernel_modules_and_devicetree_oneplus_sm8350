@@ -131,9 +131,6 @@ int clock_control_explorer(struct explorer_plat_data *epd, bool is_on);
 int power_clock_control_explorer(struct explorer_plat_data *epd, bool is_on);
 int power_clock_suspend_explorer(struct explorer_plat_data *epd);
 bool get_explorer_on_status(struct explorer_plat_data *epd);
-#ifdef SLT_ENABLE
-int regulator_control_explorer(struct explorer_plat_data *epd, bool is_on);
-#endif
 int set_power_state_explorer(struct explorer_plat_data *epd, unsigned int state);
 int get_power_state_explorer(struct explorer_plat_data *epd, unsigned int *state);
 

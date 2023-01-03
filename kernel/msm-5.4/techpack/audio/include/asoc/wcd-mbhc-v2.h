@@ -160,6 +160,10 @@ do {                                                    \
 #define ANC_DETECT_RETRY_CNT 7
 #define WCD_MBHC_SPL_HS_CNT  1
 
+#ifdef OPLUS_ARCH_EXTENDS
+#define HIGH_HPH_DETECT_RETRY_CNT 5
+#endif /* OPLUS_ARCH_EXTENDS */
+
 enum wcd_mbhc_detect_logic {
 	WCD_DETECTION_LEGACY,
 	WCD_DETECTION_ADC,

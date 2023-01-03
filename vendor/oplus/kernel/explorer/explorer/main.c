@@ -46,9 +46,6 @@
 #include "include/rtt_debug.h"
 #include "include/ipc.h"
 #include "include/exception.h"
-#ifdef SLT_ENABLE
-#include "../slt/include/slt.h"
-#endif
 #ifdef QCOM_AON
 #include "../aon/include/aon_sensor_core.h"
 #endif
@@ -858,16 +855,6 @@ ln_out:
 					}
 					break;
 				}
-#ifdef SLT_ENABLE
-				case POWER_IOC_SDIO_VDD_ON:
-					PM_LOG_I("calling SDIO_VDD_ON, for slt test.\n");
-					ret = regulator_control_explorer(epd, true);
-					break;
-				case POWER_IOC_SDIO_VDD_OFF:
-					PM_LOG_I("calling SDIO_VDD_OFF, for slt test.\n");
-					ret = regulator_control_explorer(epd, false);
-					break;
-#endif
 				default:
 					PM_LOG_E("%s, info: 0x%x not support.\n", __func__, info);
 			}
@@ -1405,56 +1392,7 @@ syssts_out:
 			devm_kfree(dev, data);
 			break;
 		}
-#ifdef SLT_ENABLE
-		case IOC_NR_SLT:
-		{
-			void *data = NULL;
-			char *slt_command = NULL;
-			struct explorer_slt_msg_header *slt_header = NULL;
-			size_t slt_command_length = 0;
-			if (param_size >= EXPLORER_IOC_LEN_MAX) {
-				pr_err("%s, ioctl param size exceeds max length.\n", __func__);
-				return -EINVAL;
-			}
-			data = devm_kzalloc(dev, param_size, GFP_KERNEL);
-			if (!data) {
-				pr_err("%s, alloc memory failed.\n", __func__);
-				return -ENOMEM;
-			}
-			ret = copy_from_user(data, (char __user *)arg, param_size);
-			if (ret) {
-				pr_err("%s, can not copy explorer_data from user, ret = 0x%x.\n", __func__, ret);
-				goto slt_out;
-			}
-			slt_command = (char *)data + sizeof(struct explorer_slt_msg_header);
-			slt_header = (struct explorer_slt_msg_header *)data;
-			epd->ebs.start_jiffies = jiffies;
-			slt_command_length = param_size - sizeof(struct explorer_slt_msg_header);
-			slt_command[slt_command_length] = '\0';
-			ret = explorer_slt_dispatch(epd, slt_command, slt_header->type, slt_command_length + 1);
-			if (ret < 0) {
-				pr_err("%s, explorer_slt_dispatch failed, ret = %d\n", __func__, ret);
-				goto slt_out;
-			}
-			pr_debug("%s, read IOC_NR_SLT done.\n", __func__);
-slt_out:
-			devm_kfree(dev, data);
-			break;
-		}
-		case IOC_NR_SLT_WAIT_FW:
-		{
-			struct explorer_slt_fw slt_fw;
-			ret = copy_from_user((void *)&slt_fw, (char __user *)arg, sizeof(slt_fw));
-			if (ret) {
-				pr_err("%s, can not copy explorer_slt_fw from user, ret = 0x%x.\n", __func__, ret);
-				break;
-			}
-			/* TODO: wait slt firmware */
-			ret = wait_firmware_on(epd, &slt_fw);
-			pr_info("%s, slt firmware type: %d, ret = %d.\n", __func__, slt_fw.type, ret);
-			break;
-		}
-#endif
+#ifndef ZEKU_EXPLORER_PLATFORM_RPI
 #ifdef QCOM_AON
 		case IOC_NR_CAM_CONTROL:
 		{
@@ -1488,6 +1426,7 @@ slt_out:
 			pr_info("%s data mm-kfree", __func__);
 			break;
 		}
+#endif
 #endif
 		default:
 			pr_info("%s, execute test ioctl.\n", __func__);
@@ -2730,8 +2669,6 @@ static void explorer_parse_tstg(struct explorer_plat_data *epd, char *tstg)
 		epd->ebi.target_stage = NPU_OK;
 	else if (strstr(tstg, "PBL_PROV"))
 		epd->ebi.target_stage = PBL_PROV;
-	else if (strstr(tstg, "PBL_SLT"))
-		epd->ebi.target_stage = PBL_SLT;
 	else
 		epd->ebi.target_stage = OS_OK;
 }
@@ -3552,20 +3489,6 @@ static int explorer_parse_clocks(struct explorer_plat_data *plat_priv)
 static int explorer_parse_regulators(struct explorer_plat_data *plat_priv)
 {
 	int ret = 0;
-
-#ifndef ZEKU_EXPLORER_PLATFORM_RPI
-#ifdef SLT_ENABLE
-	struct device *dev = &(plat_priv->plat_dev->dev);
-
-	plat_priv->vcc_sdio = regulator_get(dev, "vcc_sdio");
-	if (IS_ERR(plat_priv->vcc_sdio)) {
-		pr_err("%s:No vcc_sdio regulator found\n",__func__);
-		// temporary set to 0, need fix
-		ret = 0;
-	}
-#endif
-#endif
-
 	return ret;
 }
 
@@ -3765,9 +3688,6 @@ static int explorer_probe(struct platform_device *plat_dev)
 	atomic_set(&plat_priv->is_ddr_failed, 0);
 	plat_priv->heartbeat_started = false;
 	INIT_DELAYED_WORK(&plat_priv->heartbeat_detect_work, heartbeat_detect_delayed_work);
-#ifdef SLT_ENABLE
-	plat_priv->is_vcc_sdio_on = false;
-#endif
 	plat_priv->est.sdio_tuning_status = -TUNING_BEGIN;
 	mutex_init(&plat_priv->power_sync_lock);
 	init_completion(&plat_priv->sleep_completion);
@@ -3856,10 +3776,6 @@ static int explorer_probe(struct platform_device *plat_dev)
 	thermal_zone_device_register("zeku_explorer",
 		 0, 0, (void*)plat_priv, &explorer_thermal_zone_ops, NULL, 0, 0);
 
-#ifdef SLT_ENABLE
-	/* init slt */
-	explorer_sdio_slt_test_case_init();
-#endif
 	pr_info("%s, done.\n", __func__);
 	return 0;
 

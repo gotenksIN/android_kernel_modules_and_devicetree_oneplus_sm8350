@@ -22,6 +22,7 @@ static struct web_target {
        {"vilege_process0", {"Chrome_ChildIOT", "Compositor", "CrRendererMain"}},
        {"one:gpu_process", {"CrGpuMain"}},
        {"ieyou.train.ark", {"JNISurfaceTextu", "1.ui"}},
+       {"v.douyu.android", {"Chrome_IOThread"}},
 };
 
 bool is_top(struct task_struct *p)
